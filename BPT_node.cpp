@@ -2,6 +2,7 @@
 #include <vector>
 #include "BPT_node.h"
 using namespace std;
+
 // construction function
 template <class T>
 TreeNode<T>::TreeNode(int tree_degree, bool isleaf): num(0),parent(NULL),next(NULL),isLeaf(isleaf),degree(tree_degree)
@@ -144,7 +145,7 @@ unsigned int TreeNode<T>::Add(T &key)
         keys[0] = key;
         return 0;
     }
-    int index = 0;
+    unsigned int index = 0;
     //find the position for insertion
     bool exist = Find(key, index);
     if(!exist)
@@ -263,6 +264,7 @@ void TreeNode<T>::test()
 {
     for(int i=0;i<num;i++)
     {
-        cout<
+        cout<<" -> "<<keys[i];
     }
+    cout<<"\n";
 }

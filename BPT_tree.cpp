@@ -1,293 +1,668 @@
 #include <iostream>
 #include <vector>
+#include <sstream>
+#include <map>
+#include <string>
 #include "BPT_node.h"
-
-
+#include "BPT_tree.h"
 using namespace std;
 
-class TreeNode
-{
-public:
-    unsigned int num; // number of keys
-    TreeNode * parent;// points to its parent
-    TreeNode * next; // points to next leaf node
-    bool isLeaf;// leaf node or not
-    int degree;
-    
-    vector <TreeNode*> child; //points to its child
-    vector <T> keys; // vector storing keys
-    vector <int> element;
-public:
-    TreeNode(int tree_degree, bool isleaf);// construction function
-    ~TreeNode();
-    bool isRoot();
-    bool Find(T key, unsigned int &index);// return index if key is found
-    unsigned int Add(T &key);//add the key for non-leaf node
-    unsigned int Add(T &key,int elem);//add the key for leaf node
-    bool Delete(unsigned int index);//delete node by index
-    TreeNode * Split(T &key);// split the node
-    TreeNode * nextLeaf();
-    bool RangeFind(unsigned int index, T &key, vector<int>& element);//find nodes
-    //start from index, end to key
-    void test();
-};
-
-
-
-// construction function
 template <class T>
-TreeNode<T>::TreeNode(int tree_degree, bool isleaf): num(0),parent(NULL),next(NULL),isLeaf(isleaf),degree(tree_degree)
+void BPlusTree<T>::initTree()
 {
-    for(unsigned int i=0;i<degree+1;i++)
+    root = new TreeNode<T>(degree, true);//is leaf
+    key_num = 0;
+    level = 1;
+    node_num = 1;
+    leafHead = root;
+}
+//read from disk all block_num times
+template <class T>
+void BPlusTree<T>::readFromDiskAll()
+{
+    string fname = "./database/index/" + FileName;
+    getFile(fname);
+    int block_num = getBlockNum(fname);//table name is fname
+    if(block_num <= 0)
     {
-        child.push_back(NULL);
-        keys.push_back(T());
-        element.push_back(int());
+        block_num = 1;
     }
-    child.push_back(NULL);
+    //get page pointer from buffer manager
+    for(int i=0;i<block_num;i++)
+    {
+        char * p = buffer_manager.getPage(fname,i);
+        readFromDisk(p, p+PAGESIZE);
+    }
 }
 template <class T>
-TreeNode<T>::~TreeNode(){}
-template <class T>
-bool TreeNode<T>::isRoot()
+BPlusTree<T>::BPlusTree(string f_name, int key_size, int tree_degree):FileName(f_name),key_num(0),level(0),node_num(0),root(NULL),leafHead(NULL),key_size(key_size),degree(tree_degree)
 {
-    if(parent==NULL) return true;
-    else return false;
+    initTree();
+    readFromDiskAll();
 }
-//find index by key
 template <class T>
-bool TreeNode<T>::Find(T key, unsigned int &index)
+BPlusTree<T>::~BPlusTree()
 {
-    if(num==0)
+    drop_tree(root);
+    key_num = 0;
+    root = NULL;
+    level = 0;
+}
+//find the leaf node of the key
+template <class T>
+void BPlusTree<T>::FindLeaf(Tree pNode, T key, tmp_Node &t_node)
+{
+    unsigned int index = 0;
+    if(pNode->Find(key, index))//find if key is in current node
     {
-        index = 0;
+        if(pNode->isLeaf)// current node is leaf node
+        {
+            t_node.pNode = pNode;
+            t_node.index = index;
+            t_node.isFind = true;
+        }
+        else// not a leaf node
+        {
+            pNode = pNode->child[index+1];
+            while(!pNode->isLeaf)//deepen until to leaf
+            {
+                pNode = pNode->child[0];
+            }
+            t_node.pNode = pNode;
+            t_node.index = 0;
+            t_node.isFind = true;
+        }
+    }
+    else//not find
+    {
+        if(pNode->isLeaf)
+        {
+            t_node.pNode = pNode;
+            t_node.index = index;
+            t_node.isFind = false;
+        }
+        else
+        {
+            FindLeaf(pNode->child[index], key, t_node);
+        }
+    }
+}
+template <class T>
+bool BPlusTree<T>::insert_key(T &key, int element)
+{
+    tmp_Node t_node;
+    if(root==NULL)
+    {
+        initTree();
+    }
+    FindLeaf(root, key, t_node);
+    if(t_node.isFind)//is found, alread exsits
+    {
+        cout<<"the inserted key is already exsits.\n";
         return false;
     }
-    if(key < key[0])//min
+    t_node.pNode->Add(key,element);
+    if(t_node.pNode->num == degree)//if the node is full after insertion
     {
-        index = 0;
-        return false;
+        after_Insertion(t_node.pNode);
     }
-    if(key > keys[num-1])//max
+    key_num++;
+    return true;
+}
+
+template <class T>
+bool BPlusTree<T>::after_Insertion(Tree pNode)
+{
+    T key;
+    Tree newNode = pNode->Split(key);//split the full node, return the critical key, newNode is right-half
+    node_num++;
+    if(pNode->isRoot())//if the full node is root
     {
-        index = num;
-        return false;
-    }
-    int linear_value = 50;
-    if(num < linear_value)//do linear search
-    {
-        for(int i=0;i<num;i++)
+        Tree root = new TreeNode<T>(degree, false);//not a leaf
+        if(root==NULL)
         {
-            if(key==keys[i])
-            {
-                index = i;
-                return true;
-            }
-            if(keys[i] < key)
-            {
-                continue;
-            }
-            else
-            {
-                index = i;
-                return false;
-            }
-        }
-    }
-    else// do 1/2 search
-    {
-        int left = 0;
-        int right = num - 1;
-        int find = 0;
-        while(left < right + 1)
-        {
-            find = (right + left) / 2;
-            if (keys[find] == key)
-            {
-                index = find;
-                return true;
-            }
-            else if (keys[find] < key)
-            {
-                left = find;
-            }
-            else if (keys[find] > key)
-            {
-                right = find;
-            }
-        }
-        if (keys[left] >= key)
-        {
-            index = left;
-            if(keys[left] == key) return true;
-            else return false;
-        }
-        else if (keys[right] >= key)
-        {
-            index = right;
-            if(keys[right] == key) return true;
-            else return false;
-        }
-        else if(keys[right] < key)
-        {
-            index = right++;
+            cout<<"Not enough space to create a new root node\n";
             return false;
         }
+        level++;
+        node_num++;
+        this->root = root;
+        pNode->parent = root;
+        newNode->parent = root;
+        root->Add(key);
+        root->child[0] = pNode;
+        root->child[1] = newNode;
+        return true;
+    }
+    else// full node is not a root
+    {
+        Tree parent = pNode->parent;
+        unsigned int index = parent->Add(key);//return the key's index
+        parent->child[index+1] = newNode;
+        newNode->parent = parent;
+        
+        if(parent->num == degree)//parent is full
+        {
+            return after_Insertion(parent);
+        }
+        return true;
+    }
+}
+//get key's element
+template <class T>
+int BPlusTree<T>::search_element(T &key)
+{
+    if(root==NULL) return -1;
+    tmp_Node t_node;
+    FindLeaf(root, key, t_node);
+    if(!t_node.isFind)//not found
+    {
+        return -1;
+    }
+    return t_node.pNode->element[t_node.index];
+}
+template <class T>
+bool BPlusTree<T>::delete_key(T &key)
+{
+    tmp_Node t_node;
+    if(root==NULL)
+    {
+        cout<<"Root is empty!\n";
+        return false;
+    }
+    FindLeaf(root, key, t_node);
+    if(!t_node.isFind)//not found
+    {
+        cout<<"Key not exsits!\n";
+        return false;
+    }
+    if(t_node.pNode->isRoot())//deleting root
+    {
+        t_node.pNode->Delete(t_node.index);
+        key_num--;
+        return after_Deletion(t_node.pNode);
+    }
+    else// not root
+    {
+        if(t_node.index==0 && leafHead!=t_node.pNode)//index=0 and not leaf, the key exists in parents
+        {
+            unsigned int index;
+            Tree new_parent = t_node.pNode->parent;
+            bool isfind_inparent = new_parent->Find(key, index);
+            while(!isfind_inparent)//not found, do upper
+            {
+                if(new_parent->parent!=NULL)
+                {
+                    new_parent = new_parent->parent;
+                }
+                else
+                {
+                    break;
+                }
+                isfind_inparent = new_parent->Find(key, index);
+            }
+            //replace the deleted position with latter
+            new_parent->keys[index] = t_node.pNode->keys[1];
+            //delete by index in node
+            t_node.pNode->Delete(t_node.index);
+            key_num--;
+            return after_Deletion(t_node.pNode);
+        }
+        else//leaf node
+        {
+            t_node.pNode->Delete(t_node.index);
+            key_num--;
+            return after_Deletion(t_node.pNode);
+        }
+    }
+}
+template <class T>
+bool BPlusTree<T>::after_Deletion(Tree pNode)
+{
+    unsigned int min_key_num = (degree-1)/2;
+    //No need to adjust
+    if(pNode->isLeaf && pNode->num >= min_key_num)//leaf and big enough
+    {
+        return true;
+    }
+    if(degree!=3 && !pNode->isLeaf && pNode->num>=min_key_num-1)// not leaf node, degree!=3, big enough
+    {
+        return true;
+    }
+    if(degree==3 && !pNode->isLeaf && pNode->num<0)// not leaf node, degree=3, empty
+    {
+        return true;
+    }
+    //need adjustment
+    if(pNode->isRoot())//adjust root
+    {
+        if(pNode->num > 0)
+        {
+            return true;
+        }
+        
+        if(root->isLeaf)// root is leaf
+        {
+            delete pNode;
+            root = NULL;
+            leafHead = NULL;
+            level--;
+            node_num--;
+        }
+        else//root is non-leaf
+        {
+            root = pNode->child[0];//make root's 1st child as root
+            root->parent = NULL;
+            delete pNode;
+            level--;
+            node_num--;
+        }
+    }
+    else//adjust non-root
+    {
+        Tree parent = pNode->parent;
+        Tree brother = NULL;
+        if(pNode->isLeaf)//leaf node
+        {
+            unsigned int index = 0;
+            parent->Find(pNode->keys[0], index);
+            
+            if(parent->child[0]!=pNode && index+1==parent->num)//pNode is rightest child
+            {
+                brother = parent->child[index];//pNode's left brother
+                if(brother->num > min_key_num)//big enough, give one to pNode
+                {
+                    for(int i=pNode->num;i>0;i--)
+                    {
+                        pNode->keys[i] = pNode->keys[i-1];
+                        pNode->element[i] = pNode->element[i-1];
+                    }
+                    pNode->keys[0] = brother->keys[brother->num-1];
+                    pNode->element[0] = brother->element[brother->num-1];
+                    brother->Delete(brother->num-1);
+                    pNode->num++;
+                    //update parent's key
+                    parent->keys[index] = pNode->keys[0];
+                    return true;
+                }
+                else//brother is small, shrink parent, combine brother and pNode
+                {
+                    parent->Delete(index);//delete parent
+                    for(int i=0;i<pNode->num;i++)
+                    {
+                        brother->keys[brother->num+i] = pNode->keys[i];
+                        brother->element[brother->num+i] = pNode->element[i];
+                    }
+                    brother->num += pNode->num;
+                    brother->next = pNode->next;
+                    delete pNode;
+                    node_num--;
+                    return after_Deletion(parent);//pass up to parent
+                }
+            }
+            else//pNode is not rightest
+            {
+                //make brother to pNode's right
+                if(parent->child[0] == pNode)//lefest child
+                {
+                    brother = parent->child[1];
+                }
+                else
+                {
+                    brother = parent->child[index+2];
+                }
+                if(brother->num > min_key_num)// big enough, give one to pNode
+                {
+                    pNode->keys[pNode->num] = brother->keys[0];
+                    pNode->element[pNode->num] = brother->element[0];
+                    pNode->num++;
+                    brother->Delete(0);
+                    //update parent's key
+                    if(pNode == parent->child[0])
+                    {
+                        parent->keys[0] = brother->keys[0];
+                    }
+                    else
+                    {
+                        parent->keys[index+1] = brother->keys[0];
+                    }
+                    return true;
+                }
+                else// brother is small, merge
+                {
+                    for(int i=0;i<brother->num;i++)
+                    {
+                        pNode->keys[pNode->num+i] = brother->keys[i];
+                        pNode->element[pNode->num+i] = brother->element[i];
+                    }
+                    if(pNode == parent->child[0])
+                    {
+                        parent->Delete(0);
+                    }
+                    else
+                    {
+                        parent->Delete(index+1);
+                    }
+                    pNode->num += brother->num;
+                    pNode->next = brother->next;
+                    delete brother;
+                    node_num--;
+                    return after_Deletion(parent);
+                }
+            }
+        }
+        else//not a leaf-node
+        {
+            unsigned int index = 0;
+            parent->Find(pNode->child[0]->keys[0], index);
+            if(parent->child[0]!=pNode && index+1 == parent->num)//pnode is rightest
+            {
+                brother = parent->child[index];//brother is left
+                if (brother->num > min_key_num - 1)//bro big enough, give 1 to pNode
+                {
+                    pNode->child[pNode->num+1] = pNode->child[pNode->num];
+                    for (unsigned int i = pNode->num; i > 0; i--)
+                    {
+                        pNode->child[i] = pNode->child[i-1];
+                        pNode->keys[i] = pNode->keys[i-1];
+                    }
+                    pNode->child[0] = brother->child[brother->num];
+                    pNode->keys[0] = parent->keys[index];
+                    pNode->num++;
+                    parent->keys[index] = brother->keys[brother->num-1];
+                    if (brother->child[brother->num]!=NULL)
+                    {
+                        brother->child[brother->num]->parent = pNode;
+                    }
+                    brother->Delete(brother->num-1);
+                    return true;
+                }
+                else// bro is small, merge
+                {
+                    brother->keys[brother->num] = parent->keys[index];
+                    parent->Delete(index);
+                    brother->num++;
+                    for (int i = 0; i < pNode->num; i++)
+                    {
+                        brother->child[brother->num+i] = pNode->child[i];
+                        brother->keys[brother->num+i] = pNode->keys[i];
+                        brother->child[brother->num+i]->parent = brother;
+                    }
+                    brother->child[brother->num+pNode->num] = pNode->child[pNode->num];
+                    brother->child[brother->num+pNode->num]->parent = brother;
+                    brother->num += pNode->num;
+                    delete pNode;
+                    node_num --;
+                    return after_Deletion(parent);
+                }
+            }
+            else//pnode is not the most right
+            {
+                if (parent->child[0] == pNode)//most left
+                {
+                    brother = parent->child[1];
+                }
+                else
+                {
+                    brother = parent->child[index+2];
+                }
+                if (brother->num > min_key_num - 1)//bro big, give 1 to pNode
+                {
+                    pNode->child[pNode->num+1] = brother->child[0];
+                    pNode->keys[pNode->num] = brother->keys[0];
+                    pNode->child[pNode->num+1]->parent = pNode;
+                    pNode->num++;
+                    if (pNode == parent->child[0])
+                    {
+                        parent->keys[0] = brother->keys[0];
+                    }
+                    else
+                    {
+                        parent->keys[index+1] = brother->keys[0];
+                    }
+                    brother->child[0] = brother->child[1];
+                    brother->Delete(0);
+                    return true;
+                }
+                else//bro small, merge
+                {
+                    pNode->keys[pNode->num] = parent->keys[index];
+                    if(pNode == parent->child[0])
+                    {
+                        parent->Delete(0);
+                    }
+                    else
+                    {
+                        parent->Delete(index+1);
+                    }
+                    pNode->num++;
+                    for(int i = 0; i < brother->num; i++)
+                    {
+                        pNode->child[pNode->num+i] = brother->child[i];
+                        pNode->keys[pNode->num+i] = brother->keys[i];
+                        pNode->child[pNode->num+i]->parent = pNode;
+                    }
+                    pNode->child[pNode->num+brother->num] = brother->child[brother->num];
+                    pNode->child[pNode->num+brother->num]->parent = pNode;
+                    pNode->num += brother->num;
+                    delete brother;
+                    node_num--;
+                    return after_Deletion(parent);
+                }
+            }
+        }
     }
     return false;
 }
 template <class T>
-TreeNode<T> * TreeNode<T>::Split(T &key)
+void BPlusTree<T>::drop_tree(Tree node)
 {
-    int min_Node_num = (degree-1)/2;
-    //create a new node to return
-    TreeNode* newNode = new TreeNode(degree, this->isLeaf);
-    if(!isLeaf)//not a leaf node
+    if(node!=NULL)
     {
-        key = keys[min_Node_num];
-        //make new node with right-half
-        for(int i = min_Node_num+1; i <= degree;i++)
+        if(!node->isLeaf)//not leaf node
         {
-            int new_index = i - min_Node_num - 1;
-            newNode->child[new_index] = this->child[i];
-            newNode->child[new_index]->parent = newNode;
-            this->child[i] = NULL;//make right-half empty
+            for(int i = 0; i <= node->num; i++)
+            {
+                dropTree(node->child[i]);//pass down
+                node->child[i] = NULL;
+            }
         }
-        for(int i=min_Node_num+1;i <= degree-1;i++)
-        {
-            int new_index = i - min_Node_num - 1;
-            newNode->keys[new_index] = this->keys[i];//get keys
-            this->keys[i] = T();//make right-half empty
-        }
-        this->keys[min_Node_num] = T();
-        newNode->parent = this->parent;
-        newNode->num = min_Node_num;
-        this->num = min_Node_num;
-    }
-    return newNode;
-}
-//add key for non-leaf node and return its index
-template <class T>
-unsigned int TreeNode<T>::Add(T &key)
-{
-    if(num==0)
-    {
-        num++;
-        keys[0] = key;
-        return 0;
-    }
-    int index = 0;
-    //find the position for insertion
-    bool exist = Find(key, index);
-    if(!exist)
-    {
-        //adjust the keys and child nodes
-        for(int i=num; i>index; i--)
-        {
-            keys[i] = key[i-1];
-        }
-        keys[index] = key;
-        for(int i=num+1;i>index+1;i--)
-        {
-            child[i] = child[i-1];
-        }
-        child[index+1] = NULL;
-        num++;
-        return index;
+        delete node;
+        node_num--;
+        return;
     }
     else
     {
-        cout<<"Inserted Key already exists.\n";
-        return 0;
+        return;
     }
 }
-//add the key for leaf node and return the index
 template <class T>
-unsigned int TreeNode<T>::Add(T &key, int elem)
+void BPlusTree<T>::searchRange(T &key1, T &key2, vector<int> & element, int flag)
 {
-    if(!isLeaf) return 0;
-    if(num==0)//empty
+    if(root==NULL)
     {
-        num++;
-        keys[0] = key;
-        element[0] = elem;
-        return 0;
+        return;
     }
-    unsigned int index = 0;
-    bool isexist = Find(key,index);
-    if(!isexist)
+    
+    if (flag == 2)//find > key1
     {
-        for(int i=num;i>index;i--)
+        tmp_Node t_node1;
+        FindLeaf(root, key1, t_node1);
+        bool finished = false;
+        Tree pNode = t_node1.pNode;
+        unsigned int index = t_node1.index;
+        do
         {
-            keys[i] = keys[i-1];
-            element[i] = element[i-1];
-        }
-        num++;
-        keys[index] = key;
-        element[index] = elem;
-        return index;
+            finished = pNode->RangeFind2(index, element);//find nodes x > t_node1.index, store them into element
+            index = 0;
+            if (pNode->next == NULL) break;
+            else pNode = pNode->nextLeaf();
+        } while (!finished);
     }
-    else
+    else if (flag == 1)// find < key2
     {
-        cout<<"Added Leaf node already exsits.\n";
-        return 0;
-    }
-}
-template <class T>
-bool TreeNode<T>::Delete(unsigned int index)
-{
-    if(index > num) return false;
-    if(!isLeaf)
-    {
-        for(int i=index;i<num-1;i++)
+        tmp_Node t_node2;
+        FindLeaf(root, key2, t_node2);
+        bool finished = false;
+        Tree pNode = t_node2.pNode;
+        unsigned int index = t_node2.index;
+        do
         {
-            keys[i] = keys[i+1];
-            child[i+1] = child[i+2];
-        }
-        keys[num-1] = T();
-        child[num] = NULL;
-        num--;
-        return true;
+            finished = pNode->RangeFind2(index, element);
+            index = 0;
+            if (pNode->next == NULL) break;
+            else pNode = pNode->nextLeaf();
+        } while (!finished);
     }
-    else
+    else// find   key1 < x < key2
     {
-        for(int i=index;i<num-1;i++)
+        tmp_Node t_node1, t_node2;
+        FindLeaf(root, key1, t_node1);
+        FindLeaf(root, key2, t_node2);
+        bool finished = false;
+        unsigned int index;
+        if (key1 <= key2)
         {
-            keys[i] = keys[i+1];
-            element[i] = element[i+1];
+            Tree pNode = t_node1.pNode;
+            index = t_node1.index;//index = key1
+            do
+            {
+                finished = pNode->RangeFind(index, key2, element);//find <key2
+                index = 0;
+                if (pNode->next == NULL) break;
+                else pNode = pNode->nextLeaf();
+            } while (!finished);
         }
-        keys[num-1] = T();
-        element[num-1] = int();
-        num--;
-        return true;
+        else//reverse
+        {
+            Tree pNode = t_node2.pNode;
+            index = t_node2.index;
+            do {
+                finished = pNode->RangeFind(index, key1, element);
+                index = 0;
+                if (pNode->next == NULL)
+                    break;
+                else
+                    pNode = pNode->nextLeaf();
+            } while (!finished);
+        }
     }
+    //sort and make it unique
+    sort(element.begin(),element.end());
+    element.erase(unique(element.begin(), element.end()), element.end());//if not unique, erase the latter
+    return;
 }
 template <class T>
-TreeNode<T>* TreeNode<T>::nextLeaf()
+void BPlusTree<T>::getFile(string fname)
 {
-    return next;
-}
-//range find elements between index and key, return the elem_ret vector
-template<class T>
-bool TreeNode<T>::RangeFind(unsigned int index, T &key, vector<int>& elem_ret)
-{
-    int i = 0;
-    for(i=index;keys[i]<=key&&i<num;i++)
+    FILE* f = fopen(fname.c_str() , "r");
+    if (f == NULL)
     {
-        elem_ret.push_back(element[i]);
+        f = fopen(fname.c_str(), "w+");
+        fclose(f);
+        f = fopen(fname.c_str() , "r");
     }
-    if(keys[i] > key) return false;
-    else return true;
+    fclose(f);
+    return;
 }
-//find nodes x > index
 template <class T>
-bool TreeNode<T>::RangeFind2(unsigned int index,vector<int>& elem_ret)
+int BPlusTree<T>::getBlockNum(string table_name)
 {
-    for(int i=index;i<num;i++)
+    char* p;
+    int block_num = -1;
+    do
     {
-        elem_ret.push_back(element[i]);
+        p = buffer_manager.getPage(table_name, block_num + 1);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
+}
+
+
+
+template <class T>
+void BPlusTree<T>::readFromDisk(char *p, char *end)
+{
+    T key;
+    int element;
+    for(int i = 0; i < PAGESIZE; i++)
+    {
+        if (p[i] != '#')
+        {
+            return;
+        }
+        i += 2;
+        char tmp[100];
+        int j;
+        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+        {
+            tmp[j++] = p[i];
+        }
+        tmp[j] = '\0';
+        string s(tmp);
+        stringstream stream(s);
+        stream >> key;
+        memset(tmp, 0, sizeof(tmp));
+        i++;
+        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+        {
+            tmp[j++] = p[i];
+        }
+        tmp[j] = '\0';
+        string s1(tmp);
+        stringstream stream1(s1);
+        stream1 >> element;
+        insert_key(key, element);
     }
-    return false;
+}
+
+template <class T>
+void BPlusTree<T>::WBToDiskAll()
+{
+    string fname = "./database/index/" + FileName;
+    getFile(fname);
+    int block_num = getBlockNum(fname);
+    Tree ntmp = leafHead;
+    int i, j;
+    for (j = 0, i = 0; ntmp != NULL; j++)
+    {
+        char* p = buffer_manager.getPage(fname, j);
+        int offset = 0;
+        memset(p, 0, PAGESIZE);
+        for (i = 0; i < ntmp->num; i++)
+        {
+            p[offset++] = '#';
+            p[offset++] = ' ';
+            copyString(p, offset, ntmp->keys[i]);
+            p[offset++] = ' ';
+            copyString(p, offset, ntmp->element[i]);
+            p[offset++] = ' ';
+        }
+        p[offset] = '\0';
+        int page_id = buffer_manager.getPageId(fname, j);
+        buffer_manager.modifyPage(page_id);
+        ntmp = ntmp->next;
+    }
+    while (j < block_num)
+    {
+        char* p = buffer_manager.getPage(fname, j);
+        memset(p, 0, PAGESIZE);
+        int page_id = buffer_manager.getPageId(fname, j);
+        buffer_manager.modifyPage(page_id);
+        j++;
+    }
+    return;
+}
+template <class T>
+void BPlusTree<T>::print_leaf()
+{
+    Tree p = leafHead;
+    while(p != NULL)
+    {
+        p->test();
+        p = p->nextLeaf();
+    }
+    return;
 }
 
 
