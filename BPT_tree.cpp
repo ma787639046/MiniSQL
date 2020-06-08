@@ -5,37 +5,12 @@
 #include <string>
 #include "BPT_node.h"
 #include "BPT_tree.h"
-using namespace std;
+#include "BufferManager.h"
+#include "const.h"
+
 
 template <class T>
-void BPlusTree<T>::initTree()
-{
-    root = new TreeNode<T>(degree, true);//is leaf
-    key_num = 0;
-    level = 1;
-    node_num = 1;
-    leafHead = root;
-}
-//read from disk all block_num times
-template <class T>
-void BPlusTree<T>::readFromDiskAll()
-{
-    string fname = "./database/index/" + FileName;
-    getFile(fname);
-    int block_num = getBlockNum(fname);//table name is fname
-    if(block_num <= 0)
-    {
-        block_num = 1;
-    }
-    //get page pointer from buffer manager
-    for(int i=0;i<block_num;i++)
-    {
-        char * p = buffer_manager.getPage(fname,i);
-        readFromDisk(p, p+PAGESIZE);
-    }
-}
-template <class T>
-BPlusTree<T>::BPlusTree(string f_name, int key_size, int tree_degree):FileName(f_name),key_num(0),level(0),node_num(0),root(NULL),leafHead(NULL),key_size(key_size),degree(tree_degree)
+BPlusTree<T>::BPlusTree(std::string f_name, int key_size, int tree_degree):FileName(f_name),key_num(0),level(0),node_num(0),root(NULL),leafHead(NULL),key_size(key_size),degree(tree_degree)
 {
     initTree();
     readFromDiskAll();
@@ -48,43 +23,35 @@ BPlusTree<T>::~BPlusTree()
     root = NULL;
     level = 0;
 }
-//find the leaf node of the key
 template <class T>
-void BPlusTree<T>::FindLeaf(Tree pNode, T key, tmp_Node &t_node)
+void BPlusTree<T>::initTree()
 {
-    unsigned int index = 0;
-    if(pNode->Find(key, index))//find if key is in current node
+    root = new TreeNode<T>(degree, true);//is leaf
+    key_num = 0;
+    level = 1;
+    node_num = 1;
+    leafHead = root;
+}
+template <class T>
+void BPlusTree<T>::drop_tree(Tree node)
+{
+    if(node!=NULL)
     {
-        if(pNode->isLeaf)// current node is leaf node
+        if(!node->isLeaf)//not leaf node
         {
-            t_node.pNode = pNode;
-            t_node.index = index;
-            t_node.isFind = true;
-        }
-        else// not a leaf node
-        {
-            pNode = pNode->child[index+1];
-            while(!pNode->isLeaf)//deepen until to leaf
+            for(int i = 0; i <= node->num; i++)
             {
-                pNode = pNode->child[0];
+                dropTree(node->child[i]);//pass down
+                node->child[i] = NULL;
             }
-            t_node.pNode = pNode;
-            t_node.index = 0;
-            t_node.isFind = true;
         }
+        delete node;
+        node_num--;
+        return;
     }
-    else//not find
+    else
     {
-        if(pNode->isLeaf)
-        {
-            t_node.pNode = pNode;
-            t_node.index = index;
-            t_node.isFind = false;
-        }
-        else
-        {
-            FindLeaf(pNode->child[index], key, t_node);
-        }
+        return;
     }
 }
 template <class T>
@@ -98,7 +65,7 @@ bool BPlusTree<T>::insert_key(T &key, int element)
     FindLeaf(root, key, t_node);
     if(t_node.isFind)//is found, alread exsits
     {
-        cout<<"the inserted key is already exsits.\n";
+        std::cout<<"the inserted key is already exsits.\n";
         return false;
     }
     t_node.pNode->Add(key,element);
@@ -109,7 +76,6 @@ bool BPlusTree<T>::insert_key(T &key, int element)
     key_num++;
     return true;
 }
-
 template <class T>
 bool BPlusTree<T>::after_Insertion(Tree pNode)
 {
@@ -121,7 +87,7 @@ bool BPlusTree<T>::after_Insertion(Tree pNode)
         Tree root = new TreeNode<T>(degree, false);//not a leaf
         if(root==NULL)
         {
-            cout<<"Not enough space to create a new root node\n";
+            std::cout<<"Not enough space to create a new root node\n";
             return false;
         }
         level++;
@@ -148,32 +114,19 @@ bool BPlusTree<T>::after_Insertion(Tree pNode)
         return true;
     }
 }
-//get key's element
-template <class T>
-int BPlusTree<T>::search_element(T &key)
-{
-    if(root==NULL) return -1;
-    tmp_Node t_node;
-    FindLeaf(root, key, t_node);
-    if(!t_node.isFind)//not found
-    {
-        return -1;
-    }
-    return t_node.pNode->element[t_node.index];
-}
 template <class T>
 bool BPlusTree<T>::delete_key(T &key)
 {
     tmp_Node t_node;
     if(root==NULL)
     {
-        cout<<"Root is empty!\n";
+        std::cout<<"Root is empty!\n";
         return false;
     }
     FindLeaf(root, key, t_node);
     if(!t_node.isFind)//not found
     {
-        cout<<"Key not exsits!\n";
+        std::cout<<"Key not exsits!\n";
         return false;
     }
     if(t_node.pNode->isRoot())//deleting root
@@ -454,30 +407,60 @@ bool BPlusTree<T>::after_Deletion(Tree pNode)
     }
     return false;
 }
+//find the leaf node of the key
 template <class T>
-void BPlusTree<T>::drop_tree(Tree node)
+void BPlusTree<T>::FindLeaf(Tree pNode, T key, tmp_Node &t_node)
 {
-    if(node!=NULL)
+    unsigned int index = 0;
+    if(pNode->Find(key, index))//find if key is in current node
     {
-        if(!node->isLeaf)//not leaf node
+        if(pNode->isLeaf)// current node is leaf node
         {
-            for(int i = 0; i <= node->num; i++)
-            {
-                dropTree(node->child[i]);//pass down
-                node->child[i] = NULL;
-            }
+            t_node.pNode = pNode;
+            t_node.index = index;
+            t_node.isFind = true;
         }
-        delete node;
-        node_num--;
-        return;
+        else// not a leaf node
+        {
+            pNode = pNode->child[index+1];
+            while(!pNode->isLeaf)//deepen until to leaf
+            {
+                pNode = pNode->child[0];
+            }
+            t_node.pNode = pNode;
+            t_node.index = 0;
+            t_node.isFind = true;
+        }
     }
-    else
+    else//not find
     {
-        return;
+        if(pNode->isLeaf)
+        {
+            t_node.pNode = pNode;
+            t_node.index = index;
+            t_node.isFind = false;
+        }
+        else
+        {
+            FindLeaf(pNode->child[index], key, t_node);
+        }
     }
 }
+//get key's element
 template <class T>
-void BPlusTree<T>::searchRange(T &key1, T &key2, vector<int> & element, int flag)
+int BPlusTree<T>::search_element(T &key)
+{
+    if(root==NULL) return -1;
+    tmp_Node t_node;
+    FindLeaf(root, key, t_node);
+    if(!t_node.isFind)//not found
+    {
+        return -1;
+    }
+    return t_node.pNode->element[t_node.index];
+}
+template <class T>
+void BPlusTree<T>::searchRange(T &key1, T &key2, std::vector<int> & element, int flag)
 {
     if(root==NULL)
     {
@@ -548,109 +531,8 @@ void BPlusTree<T>::searchRange(T &key1, T &key2, vector<int> & element, int flag
         }
     }
     //sort and make it unique
-    sort(element.begin(),element.end());
+    std::sort(element.begin(),element.end());
     element.erase(unique(element.begin(), element.end()), element.end());//if not unique, erase the latter
-    return;
-}
-template <class T>
-void BPlusTree<T>::getFile(string fname)
-{
-    FILE* f = fopen(fname.c_str() , "r");
-    if (f == NULL)
-    {
-        f = fopen(fname.c_str(), "w+");
-        fclose(f);
-        f = fopen(fname.c_str() , "r");
-    }
-    fclose(f);
-    return;
-}
-template <class T>
-int BPlusTree<T>::getBlockNum(string table_name)
-{
-    char* p;
-    int block_num = -1;
-    do
-    {
-        p = buffer_manager.getPage(table_name, block_num + 1);
-        block_num++;
-    } while(p[0] != '\0');
-    return block_num;
-}
-
-
-
-template <class T>
-void BPlusTree<T>::readFromDisk(char *p, char *end)
-{
-    T key;
-    int element;
-    for(int i = 0; i < PAGESIZE; i++)
-    {
-        if (p[i] != '#')
-        {
-            return;
-        }
-        i += 2;
-        char tmp[100];
-        int j;
-        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
-        {
-            tmp[j++] = p[i];
-        }
-        tmp[j] = '\0';
-        string s(tmp);
-        stringstream stream(s);
-        stream >> key;
-        memset(tmp, 0, sizeof(tmp));
-        i++;
-        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
-        {
-            tmp[j++] = p[i];
-        }
-        tmp[j] = '\0';
-        string s1(tmp);
-        stringstream stream1(s1);
-        stream1 >> element;
-        insert_key(key, element);
-    }
-}
-
-template <class T>
-void BPlusTree<T>::WBToDiskAll()
-{
-    string fname = "./database/index/" + FileName;
-    getFile(fname);
-    int block_num = getBlockNum(fname);
-    Tree ntmp = leafHead;
-    int i, j;
-    for (j = 0, i = 0; ntmp != NULL; j++)
-    {
-        char* p = buffer_manager.getPage(fname, j);
-        int offset = 0;
-        memset(p, 0, PAGESIZE);
-        for (i = 0; i < ntmp->num; i++)
-        {
-            p[offset++] = '#';
-            p[offset++] = ' ';
-            copyString(p, offset, ntmp->keys[i]);
-            p[offset++] = ' ';
-            copyString(p, offset, ntmp->element[i]);
-            p[offset++] = ' ';
-        }
-        p[offset] = '\0';
-        int page_id = buffer_manager.getPageId(fname, j);
-        buffer_manager.modifyPage(page_id);
-        ntmp = ntmp->next;
-    }
-    while (j < block_num)
-    {
-        char* p = buffer_manager.getPage(fname, j);
-        memset(p, 0, PAGESIZE);
-        int page_id = buffer_manager.getPageId(fname, j);
-        buffer_manager.modifyPage(page_id);
-        j++;
-    }
     return;
 }
 template <class T>
@@ -666,10 +548,139 @@ void BPlusTree<T>::print_leaf()
 }
 
 
+// File Operations:
+template <class T>
+void BPlusTree<T>::getFile(std::string fname)
+{
+    FILE* f = fopen(fname.c_str() , "r");
+    if (f == NULL)
+    {
+        f = fopen(fname.c_str(), "w+");
+        fclose(f);
+        f = fopen(fname.c_str() , "r");
+    }
+    fclose(f);
+    return;
+}
+template <class T>
+int BPlusTree<T>::getBlockNum(std::string table_name)
+{
+    char* p;
+    BufferManager b_m(table_name,256);
+    int block_num = -1;
+    do
+    {
+        int page_id = b_m.loadBlock(block_num + 1);
+        p = b_m.getPagePointer(page_id);
+        block_num++;
+    } while(p[0] != '\0');
+    return block_num;
+}
+template <class T>
+void BPlusTree<T>::readFromDisk(char *p, char *end)
+{
+    T key;//create a key
+    int element;//create an element
+    for(int i = 0; i < PAGESIZE; i++)
+    {
+        if (p[i] != '#')
+        {
+            return;
+        }
+        i += 2;
+        char tmp[100];
+        int j;
+        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+        {
+            tmp[j++] = p[i];
+        }
+        tmp[j] = '\0';
+        std::string s(tmp);
+        std::stringstream stream(s);
+        //get the key
+        stream >> key;
+        memset(tmp, 0, sizeof(tmp));
+        i++;
+        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+        {
+            tmp[j++] = p[i];
+        }
+        tmp[j] = '\0';
+        std::string s1(tmp);
+        std::stringstream stream1(s1);
+        //get the element
+        stream1 >> element;
+        //put them into the tree
+        insert_key(key, element);
+    }
+}
+//read from disk all block_num times
+template <class T>
+void BPlusTree<T>::readFromDiskAll()
+{
+    std::string fname = "./database/index/" + FileName;
+    getFile(fname);
+    int block_num = getBlockNum(fname);//table name is fname
+    if(block_num <= 0)
+    {
+        block_num = 1;
+    }
+    //get page pointer from buffer manager
+    BufferManager b_m(fname,256);
+    for(int i=0;i<block_num;i++)
+    {
+        int page_id = b_m.loadBlock(i);
+        char *p = b_m.getPagePointer(page_id);
+        //read: insert the key and the element into the tree
+        readFromDisk(p, p+PAGESIZE);
+    }
+}
+template <class T>
+void BPlusTree<T>::WBToDiskAll()
+{
+    std::string fname = "./database/index/" + FileName;
+    getFile(fname);
+    int block_num = getBlockNum(fname);
+    Tree ntmp = leafHead;
+    BufferManager b_m(fname,256);
+    int i, j;
+    for (j = 0, i = 0; ntmp != NULL; j++)
+    {
+        int page_id = b_m.loadBlock(j);
+        char *p = b_m.getPagePointer(page_id);
+        int offset = 0;
+        memset(p, 0, PAGESIZE);
+        for (i = 0; i < ntmp->num; i++)
+        {
+            p[offset++] = '#';
+            p[offset++] = ' ';
+            copyString(p, offset, ntmp->keys[i]);
+            p[offset++] = ' ';
+            copyString(p, offset, ntmp->element[i]);
+            p[offset++] = ' ';
+        }
+        p[offset] = '\0';
+        //make this page dirty
+        b_m.setDirty(page_id,true);
+        ntmp = ntmp->next;
+    }
+    while (j < block_num)
+    {
+        int page_id = b_m.loadBlock(j);
+        char *p = b_m.getPagePointer(page_id);
+        memset(p, 0, PAGESIZE);
+        b_m.setDirty(page_id,true);
+        j++;
+    }
+    return;
+}
+
+
+
 int main()
 {
     // TreeNode a;
-    cout<<"hello, this is a BPlusTree\n";
+    std::cout<<"hello, this is a BPlusTree\n";
 
     return 0;
 }
