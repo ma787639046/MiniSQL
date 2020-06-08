@@ -1,15 +1,16 @@
 #include <iostream>
 #include <vector>
 #include "BPT_node.h"
+#include "BufferManager.h"
+#include "const.h"
 
-using namespace std;
 template <typename T>
 
 class BPlusTree
 {
 private:
-    typedef TreeNode<T>* Tree;// the head
-    string FileName;
+    typedef TreeNode<T>* Tree;// the head node of the tree
+    std::string FileName;
     Tree root;
     Tree leafHead;
     int degree;
@@ -21,31 +22,29 @@ private:
     {
         Tree pNode;
         bool isFind;
-        unsigned int index;// the index of the key
+        unsigned int index;// the index of the node
     };
     
-private: 
-    void initTree();
-    void getFile(string fname);
-    int getBlockNum(string table_name);
-    void FindLeaf(Tree pNode, T key, tmp_Node &t_node);// find the leaf by key
-    bool after_Insertion(Tree pNode);
-    bool after_Deletion(Tree pNode);
-    
 public:
-    BPlusTree(string f_name, int key_size, int tree_degree);
+    //node operations
+    BPlusTree(std::string f_name, int key_size, int tree_degree);
     ~BPlusTree();
-    int search_element(T &key);//get element by key
-    bool insert_key(T &key, int element);
-    bool delete_key(T &key);
+    void initTree();
     void drop_tree(Tree node);
-    void searchRange(T &key1, T &key2, vector<int> & element, int flag);//search and put result into element vector
+    bool insert_key(T &key, int element);
+    bool after_Insertion(Tree pNode);
+    bool delete_key(T &key);
+    bool after_Deletion(Tree pNode);
+    void FindLeaf(Tree pNode, T key, tmp_Node &t_node);// find the leaf by key
+    int search_element(T &key);//get element by key
+    void searchRange(T &key1, T &key2, std::vector<int> & element, int flag);//search and put result into element vector
     void print_leaf();
-    
     //file operations
+    void getFile(std::string fname);
+    int getBlockNum(std::string table_name);
+    void readFromDisk(char *p, char *end);
     void readFromDiskAll();
     void WBToDiskAll();
-    void readFromDisk(char *p, char *end);
 };
 
 
