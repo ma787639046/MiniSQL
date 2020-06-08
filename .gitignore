@@ -35,5 +35,8 @@
 .vs
 Debug
 
+# MacOS DS File
+.DS_Store
+
 # Database Files
 *.db
