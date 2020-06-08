@@ -111,6 +111,7 @@
     <ClInclude Include="const.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="RecordManager.h" />
+    <ClInclude Include="Relation.h" />
     <ClInclude Include="Table.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
