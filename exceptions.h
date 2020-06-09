@@ -1,6 +1,6 @@
 //
 //	exceptions.h
-//	Created by MGY on 2020.06.05
+//	Created by MGY on 2020/06/05
 //
 
 /*

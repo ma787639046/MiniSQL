@@ -1,3 +1,12 @@
+//
+//	CatalogManager.h
+//	Created by MGY on 2020/06/04
+//
+
+/*
+	Catalog中存放索引记录Index，Catalog只负责说明哪些attribute有或需要建index
+	建索引的操作，需要调用index manager的接口。
+*/
 #pragma once
 
 #include <iostream>
@@ -5,9 +14,6 @@
 #include "BufferManager.h"
 #include "const.h"
 #include "exceptions.h"
-
-//	Catalog中存放索引记录Index，Catalog只负责说明哪些attribute有或需要建index
-//	建索引的操作，需要调用index manager的接口。
 
 /* 
 	为方便CatalogManager通过BufferManager管理block内的各个table，

@@ -1,3 +1,8 @@
+//
+//	CatalogManager.cpp
+//	Created by MGY on 2020/06/04
+//
+
 #include "CatalogManager.h"
 
 //int main() {

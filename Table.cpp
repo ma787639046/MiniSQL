@@ -1,3 +1,8 @@
+//
+//	Table.cpp
+//	Created by MGY on 2020/06/04
+//
+
 #include "Table.h"
 
 Attribute::Attribute()

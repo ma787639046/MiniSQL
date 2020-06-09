@@ -1,31 +1,28 @@
 //
 //	Table.h
-//	Created by MGY on 2020.06.07
+//	Created by MGY on 2020/06/04
 //
 
+/*
+	Table.h定义了表的基本数据结构
+*/
+
+/*
+	Table的构成如下：
+		一个Table：
+			TableName
+			Attribute：int，float，string……
+			Record: Tuple1 (1, 2.1, "ABC" ……)
+					Tuple2 (2, 1.1, "BC" ……)
+					……
+			Index:(IndexName, 对应第几个Attribute)
+*/
 #pragma once
 
 #include <iostream>
 #include <string>
 #include <vector>
 #include <sstream>
-
-/*
-	Table.h定义了表的基本数据结构
-*/
-
-
-
-/*
-Table的构成如下：
-	一个Table：
-		TableName
-		Attribute：int，float，string……
-		Record: Tuple1 (1, 2.1, "ABC" ……)
-				Tuple2 (2, 1.1, "BC" ……)
-				……
-		Index:(IndexName, 对应第几个Attribute)
-*/
 
 /* 下面定义了Attribute, Attribute最多有32个 */
 typedef enum {

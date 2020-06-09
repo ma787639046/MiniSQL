@@ -1,3 +1,8 @@
+//
+//	RecordManager.cpp
+//	Created by MGY on 2020/06/07
+//
+
 #include "RecordManager.h"
 
 //int main() {
