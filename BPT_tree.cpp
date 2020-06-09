@@ -460,7 +460,7 @@ int BPlusTree<T>::search_element(T &key)
     return t_node.pNode->element[t_node.index];
 }
 template <class T>
-void BPlusTree<T>::searchRange(T &key1, T &key2, std::vector<int> & element, int flag)
+void BPlusTree<T>::search_range(T &key1, T &key2, std::vector<int> & element, int flag)
 {
     if(root==NULL)
     {
@@ -618,7 +618,7 @@ void BPlusTree<T>::readFromDisk(char *p, char *end)
 template <class T>
 void BPlusTree<T>::readFromDiskAll()
 {
-    std::string fname = "./database/index/" + FileName;
+    std::string fname = INDEX_PATH + FileName;
     getFile(fname);
     int block_num = getBlockNum(fname);//table name is fname
     if(block_num <= 0)
@@ -638,7 +638,7 @@ void BPlusTree<T>::readFromDiskAll()
 template <class T>
 void BPlusTree<T>::WBToDiskAll()
 {
-    std::string fname = "./database/index/" + FileName;
+    std::string fname = INDEX_PATH + FileName;
     getFile(fname);
     int block_num = getBlockNum(fname);
     Tree ntmp = leafHead;
@@ -677,10 +677,10 @@ void BPlusTree<T>::WBToDiskAll()
 
 
 
-int main()
-{
-    // TreeNode a;
-    std::cout<<"hello, this is a BPlusTree\n";
-
-    return 0;
-}
+//int main()
+//{
+//    // TreeNode a;
+//    std::cout<<"hello, this is a BPlusTree\n";
+//
+//    return 0;
+//}

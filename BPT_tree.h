@@ -37,7 +37,7 @@ public:
     bool after_Deletion(Tree pNode);
     void FindLeaf(Tree pNode, T key, tmp_Node &t_node);// find the leaf by key
     int search_element(T &key);//get element by key
-    void searchRange(T &key1, T &key2, std::vector<int> & element, int flag);//search and put result into element vector
+    void search_range(T &key1, T &key2, std::vector<int> & element, int flag);//search and put result into element vector
     void print_leaf();
     //file operations
     void getFile(std::string fname);
