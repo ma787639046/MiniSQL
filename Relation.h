@@ -4,16 +4,16 @@
 // Relation.h
 // Created by MGY on 2020.06.08
 
-// Relation.hÓÃÓÚ´æ´¢WhereÌõ¼ş²éÕÒµÄ¹ØÏµºÍÊıÖµ
-// APIÔÚµ÷ÓÃRecordManager½øĞĞWhereÌõ¼ş²éÕÒÊ±£¬¿ÉÒÔ´«ÈëÒ»¸ö~¶à¸öRelation½á¹¹Ìå
-// Relation½á¹¹Ìå = Ä¿±êAttribute Name + Attribute Type(INT, FLOAT, STRING) + sign + key
-// ÀıÈç where salary > 3.1 ÖĞ£º
+// Relation.hç”¨äºå­˜å‚¨Whereæ¡ä»¶æŸ¥æ‰¾çš„å…³ç³»å’Œæ•°å€¼
+// APIåœ¨è°ƒç”¨RecordManagerè¿›è¡ŒWhereæ¡ä»¶æŸ¥æ‰¾æ—¶ï¼Œå¯ä»¥ä¼ å…¥ä¸€ä¸ª~å¤šä¸ªRelationç»“æ„ä½“
+// Relationç»“æ„ä½“ = ç›®æ ‡Attribute Name + Attribute Type(INT, FLOAT, STRING) + sign + key
+// ä¾‹å¦‚ where salary > 3.1 ä¸­ï¼š
 // Attribute Name = "salary"
 // Attribute Type = FLOAT
 // sign = GREATER
 // key.FLAOT_VALUE = 3.1
 
-// Sign±íÊ¾WhereÌõ¼şÖĞµÄ·ûºÅ
+// Signè¡¨ç¤ºWhereæ¡ä»¶ä¸­çš„ç¬¦å·
 typedef enum {
     NOT_EQUAL,
     EQUAL,

@@ -39,4 +39,5 @@ Debug
 .DS_Store
 
 # Database Files
+data
 *.db
