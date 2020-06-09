@@ -273,7 +273,7 @@ void TreeNode<T>::test()
 {
     for(int i=0;i<num;i++)
     {
-        std::std::cout<<" -> "<<keys[i];
+        std::cout<<" -> "<<keys[i];
     }
     std::cout<<"\n";
 }
