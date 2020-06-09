@@ -17,5 +17,5 @@
 //catalog文件路径
 #define CATALOG_FILEPATH "./data/catalog/catalog.db"
 
-//record文件夹路径
+//record文件夹路径。每张表有一个record，record的filepath = RECORD_PATH + table_name + ".db"
 #define RECORD_PATH "./data/record/"

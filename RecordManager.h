@@ -66,22 +66,38 @@ private:
 	void writeTupleString(std::string& s, Tuple& tuple);	//向s中写入一个Tuple
 	int getTupleSize(Tuple tuple);	//返回一个tuple encode为string后的大小
 	std::vector<Tuple> decodeTupleString(const std::string s);	//将所有的Tuple读取至一个vector中
+	bool meetRelation(key_ key, Relation relation);	//判断key是否满足单条relation关系，是返回true，否返回false
 
 	void flushToBlock(std::string s, int block_id, std::string table_name);	//将Record记录刷入对应的page中
 	std::string loadBlockString(int block_id, std::string table_name);	//将一个block装载至string中
 };
 
-//
-//RecordManager工作原理：
-//1、RecordManager以page/block为单位进行读取、写入操作。
-//2、数据储存格式为：4 bytes的已用空间 + 4 bytes的tuple个数 + n个tuple
-//3、tuple的存储格式为：4bytes的Tuple size:n + (4 bytes INT + 4 bytes FLOAT + 4 bytes sizeof(STRING_VALUE) + STRING_VALUE)*n
-//RecordManager读取、写入tuple原理：
-//写入tuple：
-//1、利用loadBlockString()将磁盘文件中的一个block装入FormatedBlockString中，此时PAGESIZE大小的block数据全部在这个string
-//2、利用getBlockStringSize()获取block已用空间，用getTupleSize()获取新tuple的空间。如果两者之和小于PAGESIZE，则
-//   调用writeTupleString()向block写入tuple，然后调用flushToBlock()将block刷入对应的page
-//读取tuple：
-//1、利用loadBlockString()将磁盘文件中的一个block装入FormatedBlockString中，此时PAGESIZE大小的block数据全部在这个string
-//2、利用decodeTupleString()将所有的Tuple读取至一个vector中
-//
+/*
+RecordManager工作原理：
+1、RecordManager以page/block为单位进行读取、写入操作。
+2、数据储存格式为：4 bytes的已用空间 + 4 bytes的tuple个数 + n个tuple
+3、tuple的存储格式为：4bytes的Tuple size:n + (4 bytes INT + 4 bytes FLOAT + 4 bytes sizeof(STRING_VALUE) + STRING_VALUE)*n
+RecordManager读取、写入tuple原理：
+写入tuple：
+1、利用loadBlockString()将磁盘文件中的一个block装入FormatedBlockString中，此时PAGESIZE大小的block数据全部在这个string
+2、利用getBlockStringSize()获取block已用空间，用getTupleSize()获取新tuple的空间。如果两者之和小于PAGESIZE，则
+   调用writeTupleString()向block写入tuple，然后调用flushToBlock()将block刷入对应的page
+读取tuple：
+1、利用loadBlockString()将磁盘文件中的一个block装入FormatedBlockString中，此时PAGESIZE大小的block数据全部在这个string
+2、利用decodeTupleString()将所有的Tuple读取至一个vector中
+
+示例代码：
+1、遍历所有block，获得每个block里面的tuple：
+	BufferManager* bufffer_manager = new BufferManager(table_path, 1);	//因为只需获取block number，所以无需较多page
+	int blocknum = bufffer_manager->getBlockNum();
+	delete(bufffer_manager);    //获取一共有几个block需要遍历
+	std::string formatedString;
+	formatedString.reserve(PAGESIZE);   //formatedString是一个block中的原始信息，就是把block中的char[PAGESIZE]的所有东西都原封不动读进来
+	for (size_t i = 0; i < blocknum; i++) {
+		formatedString = loadBlockString(i, table_name);
+		std::vector<Tuple> tuple = decodeTupleString(formatedString);   //decodeTupleString将原始数据decode为多个tuple，这时你就得到这个block有哪些tuple了。一条tuple = key1, key2, key3, ……
+		**这里干自己想要做的事情**
+		tuple.clear();	//清空tuple
+	}
+
+*/

@@ -50,6 +50,59 @@ int RecordManager::deleteRecord(std::string table_name)
 	return deleteNum;
 }
 
+int RecordManager::deleteRecord(std::string table_name, std::vector<Relation> relation)
+{
+	int deleteNum = 0;	//统计删除了多少条tuple
+	std::vector<int> index;	//按顺序储存relation中，属性的序号
+	int temp = 0;
+	// 判断对应表名是否存在
+	CatalogManager* catalog_manager = new CatalogManager();
+	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
+	for (size_t i = 0; i < relation.size(); i++) {
+		if (!catalog_manager->haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
+		index.push_back(temp);	//存入属性的序号
+	}
+	Attribute attribute = catalog_manager->getAttribute(table_name);	//获取表的所有属性信息
+	delete(catalog_manager);
+	// 检查Attribute的类型与输入的relation是否匹配
+	for (size_t i = 0; i < relation.size(); i++) {
+		if (attribute.type[index[i]] != relation[i].attributeType) throw key_type_conflict();
+	}
+	// 获取总block数量（这里不用担心储存record的db文件被删除，因为getBlockNum()会返回0）
+	BufferManager* buffer_manager = new BufferManager(table_name, 1);
+	int block_number = buffer_manager->getBlockNum();
+	delete(buffer_manager);
+
+	//异常检查完毕，开始遍历record，寻找符合条件的tuple
+	std::string formatedString;
+	formatedString.reserve(PAGESIZE);
+	for (int block_id = 0; block_id < block_number; block_id++) {
+		formatedString = loadBlockString(block_id, table_name);
+		std::vector<Tuple> current_record = decodeTupleString(formatedString);	//获得当前block中的tuples
+		std::vector<Tuple> new_record;	//储存删除后的tuple
+		//依次判断是否tuple是否满足relation
+		for (size_t j = 0; j < current_record.size(); j++) {//对于每一个tuple
+			std::vector<key_> current_tuple = current_record[j].getTuple();	//获得这条tuple
+			bool meetRelation = true;
+			for (size_t k = 0; k < relation.size(); k++) {//对于每一个relation
+				meetRelation = this->meetRelation(current_tuple[index[k]], relation[k]);
+				if (meetRelation == false) break;
+			}
+			if (meetRelation == false) {	//不满足所有条件，保留这条tuple
+				new_record.push_back(current_record[j]);
+			}
+		}
+		if (new_record.size() < current_record.size()) {//新的tuple数量变少，说明有删除情况
+			std::string newFormatedString = createFormatedBlockString();
+			for (size_t m = 0; m < new_record.size(); m++)
+				writeTupleString(newFormatedString, new_record[m]);	//创建新的formatedString
+			flushToBlock(newFormatedString, block_id, table_name);	//将新tuple刷入对应block_id的page中
+			deleteNum += current_record.size() - new_record.size();	//统计删了几条tuple
+		}		
+	}
+	return deleteNum;
+}
+
 void RecordManager::insertRecord(std::string table_name, Tuple& tuple)
 {
 	// 判断对应表名是否存在
@@ -173,76 +226,7 @@ std::vector<Tuple> RecordManager::loadRecord(std::string table_name, std::vector
 			bool meetRelation = true;	//满足条件设为true，不满足设为false
 			std::vector<key_> keys = temp[j].getTuple();	//获取这条record的所有key
 			for (size_t m = 0; m < relation.size(); m++) {
-				//先判断tuple的类型
-				if (attribute.type[index[m]] == INT) {
-					switch (relation[m].sign) {
-					case NOT_EQUAL:
-						if (!(keys[index[m]].INT_VALUE != relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					case EQUAL:
-						if (!(keys[index[m]].INT_VALUE == relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					case LESS:
-						if (!(keys[index[m]].INT_VALUE < relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					case LESS_OR_EQUAL:
-						if (!(keys[index[m]].INT_VALUE <= relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					case GREATER_OR_EQUAL:
-						if (!(keys[index[m]].INT_VALUE >= relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					case GREATER:
-						if (!(keys[index[m]].INT_VALUE > relation[m].key.INT_VALUE)) meetRelation = false;
-						break;
-					default: break;
-					}
-				}
-				else if (attribute.type[index[m]] == FLOAT) {
-					switch (relation[m].sign) {
-					case NOT_EQUAL:
-						if (!(keys[index[m]].FLOAT_VALUE != relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					case EQUAL:
-						if (!(keys[index[m]].FLOAT_VALUE == relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					case LESS:
-						if (!(keys[index[m]].FLOAT_VALUE < relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					case LESS_OR_EQUAL:
-						if (!(keys[index[m]].FLOAT_VALUE <= relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					case GREATER_OR_EQUAL:
-						if (!(keys[index[m]].FLOAT_VALUE >= relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					case GREATER:
-						if (!(keys[index[m]].FLOAT_VALUE > relation[m].key.FLOAT_VALUE)) meetRelation = false;
-						break;
-					default: break;
-					}
-				}
-				else if (attribute.type[index[m]] == STRING) {
-					switch (relation[m].sign) {
-					case NOT_EQUAL:
-						if (!(keys[index[m]].STRING_VALUE != relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					case EQUAL:
-						if (!(keys[index[m]].STRING_VALUE == relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					case LESS:
-						if (!(keys[index[m]].STRING_VALUE < relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					case LESS_OR_EQUAL:
-						if (!(keys[index[m]].STRING_VALUE <= relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					case GREATER_OR_EQUAL:
-						if (!(keys[index[m]].STRING_VALUE >= relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					case GREATER:
-						if (!(keys[index[m]].STRING_VALUE > relation[m].key.STRING_VALUE)) meetRelation = false;
-						break;
-					default: break;
-					}
-				}
+				meetRelation = this->meetRelation(keys[index[m]], relation[m]);
 				if (meetRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
 			}
 			if (meetRelation) tuple.push_back(temp[i]);	//满足所有条件，则存入这个记录
@@ -357,4 +341,80 @@ std::vector<Tuple> RecordManager::decodeTupleString(const std::string s)
 		delete(t);
 	}
 	return tuples;
+}
+
+bool RecordManager::meetRelation(key_ key, Relation relation)
+{
+	bool meetRelation = false;
+	//先判断tuple的类型
+	if (relation.attributeType == INT) {
+		switch (relation.sign) {
+		case NOT_EQUAL:
+			if (key.INT_VALUE != relation.key.INT_VALUE) meetRelation = true;
+			break;
+		case EQUAL:
+			if (key.INT_VALUE == relation.key.INT_VALUE) meetRelation = true;
+			break;
+		case LESS:
+			if (key.INT_VALUE < relation.key.INT_VALUE) meetRelation = true;
+			break;
+		case LESS_OR_EQUAL:
+			if (key.INT_VALUE <= relation.key.INT_VALUE) meetRelation = true;
+			break;
+		case GREATER_OR_EQUAL:
+			if (key.INT_VALUE >= relation.key.INT_VALUE) meetRelation = true;
+			break;
+		case GREATER:
+			if (key.INT_VALUE > relation.key.INT_VALUE) meetRelation = true;
+			break;
+		default: break;
+		}
+	}
+	else if (relation.attributeType == FLOAT) {
+		switch (relation.sign) {
+		case NOT_EQUAL:
+			if (key.FLOAT_VALUE != relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		case EQUAL:
+			if (key.FLOAT_VALUE == relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		case LESS:
+			if (key.FLOAT_VALUE < relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		case LESS_OR_EQUAL:
+			if (key.FLOAT_VALUE <= relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		case GREATER_OR_EQUAL:
+			if (key.FLOAT_VALUE >= relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		case GREATER:
+			if (key.FLOAT_VALUE > relation.key.FLOAT_VALUE) meetRelation = true;
+			break;
+		default: break;
+		}
+	}
+	else if (relation.attributeType == STRING) {
+		switch (relation.sign) {
+		case NOT_EQUAL:
+			if (key.STRING_VALUE != relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		case EQUAL:
+			if (key.STRING_VALUE == relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		case LESS:
+			if (key.STRING_VALUE < relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		case LESS_OR_EQUAL:
+			if (key.STRING_VALUE <= relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		case GREATER_OR_EQUAL:
+			if (key.STRING_VALUE >= relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		case GREATER:
+			if (key.STRING_VALUE > relation.key.STRING_VALUE) meetRelation = true;
+			break;
+		default: break;
+		}
+	}
+	return meetRelation;
 }
