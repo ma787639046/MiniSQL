@@ -4,9 +4,9 @@
 //
 
 /*
-	API£º·â×°µ×²ãµÄ3¸öManagerµÄ¸÷º¯Êı£¬Ìá¹©½Ó¿Ú¸ø¶¥²ãInterpreterÊ¹ÓÃ
-		API²»²úÉúÒì³££¬Òì³£µÄ²úÉúÓÉµ×²ãManager½øĞĞ£»
-		API²»´¦ÀíÒì³££¬Òì³£µÄ´¦ÀíÓÉ¶¥²ãInterpreter½øĞĞ¡£
+	APIï¼šå°è£…åº•å±‚çš„3ä¸ªManagerçš„å„å‡½æ•°ï¼Œæä¾›æ¥å£ç»™é¡¶å±‚Interpreterä½¿ç”¨
+		APIä¸äº§ç”Ÿå¼‚å¸¸ï¼Œå¼‚å¸¸çš„äº§ç”Ÿç”±åº•å±‚Managerè¿›è¡Œï¼›
+		APIä¸å¤„ç†å¼‚å¸¸ï¼Œå¼‚å¸¸çš„å¤„ç†ç”±é¡¶å±‚Interpreterè¿›è¡Œã€‚
 */
 #pragma once
 
@@ -16,43 +16,43 @@
 
 class API {
 public:
-	//createTable(): ´´½¨±í
-	//ÊäÈë£º±íÃû£¬
-	//		ÊôĞÔ£º¸öÊı¡¢Ãû³Æ¡¢ÀàĞÍ¡¢ÊÇ·ñunique¡¢Ö÷¼ü£¨Ã»ÓĞÖ÷¼üÉèÎª-1£¬ÓĞÖ÷¼üĞ´¶ÔÓ¦ÏÂ±ê¡£
-	//												×¢ÒâÖ÷¼üÒ»¶¨ÊÇuniqueµÄ£©¡¢ÊÇ·ñÓĞindex£¬
-	//		Ë÷Òı£º¸öÊı£¬Ë÷ÒıÃû£¬Ë÷Òı¶ÔÓ¦µÚ¼¸¸öÊôĞÔ(Ö÷¼üÒ»¶¨ÓĞË÷Òı)
-	//Òì³££ºÈç¹û´æÔÚ±íÃûÏàÍ¬µÄ±í£¬ÔòÅ×³ötable_name_conflictÒì³£ 
+	//createTable(): åˆ›å»ºè¡¨
+	//è¾“å…¥ï¼šè¡¨åï¼Œ
+	//		å±æ€§ï¼šä¸ªæ•°ã€åç§°ã€ç±»å‹ã€æ˜¯å¦uniqueã€ä¸»é”®ï¼ˆæ²¡æœ‰ä¸»é”®è®¾ä¸º-1ï¼Œæœ‰ä¸»é”®å†™å¯¹åº”ä¸‹æ ‡ã€‚
+	//												æ³¨æ„ä¸»é”®ä¸€å®šæ˜¯uniqueçš„ï¼‰ã€æ˜¯å¦æœ‰indexï¼Œ
+	//		ç´¢å¼•ï¼šä¸ªæ•°ï¼Œç´¢å¼•åï¼Œç´¢å¼•å¯¹åº”ç¬¬å‡ ä¸ªå±æ€§(ä¸»é”®ä¸€å®šæœ‰ç´¢å¼•)
+	//å¼‚å¸¸ï¼šå¦‚æœå­˜åœ¨è¡¨åç›¸åŒçš„è¡¨ï¼Œåˆ™æŠ›å‡ºtable_name_conflictå¼‚å¸¸ 
 	void createTable(std::string table_name, Attribute attribute, Index index);
 
-	//dropTable()£ºÉ¾³ı±í
-	//ÊäÈë£º±íÃû
-	//Òì³££º±í²»´æÔÚ£¬Å×³ötable_not_exist
+	//dropTable()ï¼šåˆ é™¤è¡¨
+	//è¾“å…¥ï¼šè¡¨å
+	//å¼‚å¸¸ï¼šè¡¨ä¸å­˜åœ¨ï¼ŒæŠ›å‡ºtable_not_exist
 	void dropTable(std::string table_name);
 
-	//selectRecord()£º²éÕÒÓërelationÏà·ûµÄ¼ÇÂ¼£¬²¢·µ»Ø´øÓĞ¼ÇÂ¼µÄ±í
-	//ÊäÈë£º±íÃû¡¢¹ØÏµÊı×é£º¹ØÏµ1 and ¹ØÏµ2 and ¹ØÏµ3 ¡­¡­
-	//						Ò»¸ö¹ØÏµ = ÊôĞÔÃû + ÊôĞÔÀàĞÍ£¨INT/FLOAT/STRING£©+ ·ûºÅ£¨>, >=, != ¡­¡­£©+ Öµ
-	//						ÀıÈç£ºrelation1 = "salary", FLOAT, GREATER_OR_EQUAL, 3000.0f
-	//Êä³ö£º´øÓĞ¼ÇÂ¼µÄ±í
-	//Òì³££º1¡¢table_name¶ÔÓ¦µÄ±íÃûÔÚcatalogÖĞ²»´æÔÚ£¬Å×³ötable_not_exist
-	//		2¡¢relationÖĞ£¬ÃûÎªAttribute nameµÄAttribute²»´æÔÚ£¬ÔòÅ×³öattribute_not_exist
-	//		3¡¢AttributeµÄÀàĞÍÓëÊäÈëµÄrelation ²»Æ¥Åä£¬Å×³ökey_type_conflict
+	//selectRecord()ï¼šæŸ¥æ‰¾ä¸relationç›¸ç¬¦çš„è®°å½•ï¼Œå¹¶è¿”å›å¸¦æœ‰è®°å½•çš„è¡¨
+	//è¾“å…¥ï¼šè¡¨åã€å…³ç³»æ•°ç»„ï¼šå…³ç³»1 and å…³ç³»2 and å…³ç³»3 â€¦â€¦
+	//						ä¸€ä¸ªå…³ç³» = å±æ€§å + å±æ€§ç±»å‹ï¼ˆINT/FLOAT/STRINGï¼‰+ ç¬¦å·ï¼ˆ>, >=, != â€¦â€¦ï¼‰+ å€¼
+	//						ä¾‹å¦‚ï¼šrelation1 = "salary", FLOAT, GREATER_OR_EQUAL, 3000.0f
+	//è¾“å‡ºï¼šå¸¦æœ‰è®°å½•çš„è¡¨
+	//å¼‚å¸¸ï¼š1ã€table_nameå¯¹åº”çš„è¡¨ååœ¨catalogä¸­ä¸å­˜åœ¨ï¼ŒæŠ›å‡ºtable_not_exist
+	//		2ã€relationä¸­ï¼Œåä¸ºAttribute nameçš„Attributeä¸å­˜åœ¨ï¼Œåˆ™æŠ›å‡ºattribute_not_exist
+	//		3ã€Attributeçš„ç±»å‹ä¸è¾“å…¥çš„relation ä¸åŒ¹é…ï¼ŒæŠ›å‡ºkey_type_conflict
 	Table selectRecord(std::string table_name, std::vector<Relation> relation);
 
-	//deleteRecord()£ºÉ¾³ı±íÖĞ·ûºÏrelationµÄ¼ÇÂ¼£¬²¢·µ»ØÉ¾³ıµÄÌõÊı
-	//ÊäÈë£º±íÃû¡¢¹ØÏµÊı×é£º¹ØÏµ1 and ¹ØÏµ2 and ¹ØÏµ3 ¡­¡­
-	//Êä³ö£ºÉ¾³ıµÄÌõÊı
-	//Òì³££º1¡¢table_name¶ÔÓ¦µÄ±íÃûÔÚcatalogÖĞ²»´æÔÚ£¬Å×³ötable_not_exist
-	//		2¡¢AttributeµÄÀàĞÍÓëÊäÈëµÄrelation ²»Æ¥Åä£¬Å×³ökey_type_conflict
+	//deleteRecord()ï¼šåˆ é™¤è¡¨ä¸­ç¬¦åˆrelationçš„è®°å½•ï¼Œå¹¶è¿”å›åˆ é™¤çš„æ¡æ•°
+	//è¾“å…¥ï¼šè¡¨åã€å…³ç³»æ•°ç»„ï¼šå…³ç³»1 and å…³ç³»2 and å…³ç³»3 â€¦â€¦
+	//è¾“å‡ºï¼šåˆ é™¤çš„æ¡æ•°
+	//å¼‚å¸¸ï¼š1ã€table_nameå¯¹åº”çš„è¡¨ååœ¨catalogä¸­ä¸å­˜åœ¨ï¼ŒæŠ›å‡ºtable_not_exist
+	//		2ã€Attributeçš„ç±»å‹ä¸è¾“å…¥çš„relation ä¸åŒ¹é…ï¼ŒæŠ›å‡ºkey_type_conflict
 	int deleteRecord(std::string table_name, std::vector<Relation> relation);
 
-	//insertRecord()£ºÏòÃûÎªtable_nameÖĞµÄ±í¸ñ£¬²åÈëÒ»Ìõtuple¼ÇÂ¼
-	//ÊäÈë£º±íÃû£¬tuple
-	//Êä³ö£ºÎŞ
-	//Òì³£´¦Àí£º1¡¢table_name¶ÔÓ¦µÄ±íÃûÔÚcatalogÖĞ²»´æÔÚ£¬Å×³ötable_not_exist
-	//			2¡¢²åÈëÖØ¸´µÄÖ÷¼ü£¬Å×³öprimary_key_conflict
-	//			3¡¢ÊôĞÔunique£¬²åÈëÖØ¸´µÄÖµ£¬Å×³öunique_conflictÒì³£
-	//×¢Òâ£ºÕâ¸öº¯Êı²»»á¼ì²étupleÀàĞÍ¡¢¸öÊıÊÇ·ñÓëAttributeÆ¥Åä¡£¼ì²éÇëÎñ±Ø·ÅÔÚInterpreterÖ´ĞĞ£¡£¡£¡£¡
+	//insertRecord()ï¼šå‘åä¸ºtable_nameä¸­çš„è¡¨æ ¼ï¼Œæ’å…¥ä¸€æ¡tupleè®°å½•
+	//è¾“å…¥ï¼šè¡¨åï¼Œtuple
+	//è¾“å‡ºï¼šæ— 
+	//å¼‚å¸¸å¤„ç†ï¼š1ã€table_nameå¯¹åº”çš„è¡¨ååœ¨catalogä¸­ä¸å­˜åœ¨ï¼ŒæŠ›å‡ºtable_not_exist
+	//			2ã€æ’å…¥é‡å¤çš„ä¸»é”®ï¼ŒæŠ›å‡ºprimary_key_conflict
+	//			3ã€å±æ€§uniqueï¼Œæ’å…¥é‡å¤çš„å€¼ï¼ŒæŠ›å‡ºunique_conflictå¼‚å¸¸
+	//æ³¨æ„ï¼šè¿™ä¸ªå‡½æ•°ä¸ä¼šæ£€æŸ¥tupleç±»å‹ã€ä¸ªæ•°æ˜¯å¦ä¸AttributeåŒ¹é…ã€‚æ£€æŸ¥è¯·åŠ¡å¿…æ”¾åœ¨Interpreteræ‰§è¡Œï¼ï¼ï¼ï¼
 	void insertRecord(std::string table_name, Tuple& tuple);
 
 private:

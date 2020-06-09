@@ -18,11 +18,11 @@ void API::dropTable(std::string table_name)
 
 Table API::selectRecord(std::string table_name, std::vector<Relation> relation)
 {
-	Table table(table_name, catalog_manager.getAttribute(table_name));	//½¨Á¢¿Õ±í
-	table.index = catalog_manager.getIndex(table_name);	//Ìí¼ÓË÷ÒıĞÅÏ¢ÖÁtable¶ÔÏó
-	std::vector<Tuple> tuple = record_manager.loadRecord(table_name, relation);	//»ñµÃËùÓĞ·ûºÏrelationµÄ¼ÇÂ¼
+	Table table(table_name, catalog_manager.getAttribute(table_name));	//å»ºç«‹ç©ºè¡¨
+	table.index = catalog_manager.getIndex(table_name);	//æ·»åŠ ç´¢å¼•ä¿¡æ¯è‡³tableå¯¹è±¡
+	std::vector<Tuple> tuple = record_manager.loadRecord(table_name, relation);	//è·å¾—æ‰€æœ‰ç¬¦åˆrelationçš„è®°å½•
 	for (size_t i = 0; i < tuple.size(); i++)
-		table.Record.push_back(tuple[i]);	//½«¼ÇÂ¼Ìí¼ÓÖÁtable¶ÔÏó
+		table.Record.push_back(tuple[i]);	//å°†è®°å½•æ·»åŠ è‡³tableå¯¹è±¡
 	return table;
 }
 
