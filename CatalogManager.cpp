@@ -291,6 +291,12 @@ Attribute CatalogManager::getAttribute(std::string table_name)
 	return catalog.attribute;
 }
 
+Index CatalogManager::getIndex(std::string table_name)
+{
+	Catalog catalog = getCatalog(table_name);
+	return catalog.index;
+}
+
 void CatalogManager::addIndex(std::string table_name, std::string attribute_name, std::string index_name)
 {
 	int block_id = findTableBlock(table_name);

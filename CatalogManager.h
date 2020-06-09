@@ -72,6 +72,10 @@ public:
 	//异常：表不存在，抛出table_not_exist；
 	Attribute getAttribute(std::string table_name);
 
+	//getIndex()：获取名为table_name的表的索引信息（哪些属性有索引）
+	//异常：表不存在，抛出table_not_exist；
+	Index getIndex(std::string table_name);
+
 	//addIndex()：向名为table_name的表，为名为attribute_name的属性添加名为index_name的索引记录
 	//异常：1，表不存在，抛出table_not_exist；2，属性不存在，抛出attribute_not_exist；
 	//		3，属性已经有index，抛出index_exist_conflict；4，index个数超出最大值，抛出index_full（index num设置为32，所以超不了）；
