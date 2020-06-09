@@ -153,13 +153,13 @@ bool Table::setIndex(int index, std::string index_name)
 	//判断原Index是否存在序号相同或同名情况
 	for (int i = 0; i < this->index.indexNumber; i++) {
 		if (index == this->index.num[i]) {
-			std::cout << "Index设置失败，因为这个属性已被设置了Index。" << std::endl;
+			std::cout << "Index设置失败，因为这个属性已被设置了Index" << std::endl;
 			return false;
 		}
 	}
 	for (int i = 0; i < this->index.indexNumber; i++) {
 		if (index_name == this->index.indexname[i]) {
-			std::cout << "Index设置失败，因为Index的名称重复" << std::endl;
+			std::cout << "无法设置Index：Index重复" << std::endl;
 			return false;
 		}
 	}

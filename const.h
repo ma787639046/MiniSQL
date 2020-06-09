@@ -19,3 +19,6 @@
 
 /* record文件夹路径。每张表有一个record，record的filepath = RECORD_PATH + table_name + ".db" */
 #define RECORD_PATH "./data/record/"
+
+/* index文件夹路径。每张表有一个index文件，index的filepath = INDEX_PATH + table_name + ".db" */
+#define INDEX_PATH "./data/index/"

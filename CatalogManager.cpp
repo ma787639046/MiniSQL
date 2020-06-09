@@ -31,7 +31,7 @@
 
 	//m.addIndex(new_catalog.TableName, "Cal", "Calculation");
 
-	//int page_id = catalog::buffer.loadBlock(0);
+	//int page_id = catalog::catalog_buffer.loadBlock(0);
 	//std::vector<Catalog> v = m.loadCatalogFromPage(page_id);
 	//v.push_back(new_catalog);
 	//m.flushCatalogToPage(v, page_id);
@@ -48,6 +48,7 @@
 
 void CatalogManager::createTable(std::string table_name, Attribute attribute, Index index)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	//这里判断是否存在表名相同的表。存在则抛出table_name_conflict异常
 	if (havetable(table_name)) throw table_name_conflict();
 
@@ -57,27 +58,27 @@ void CatalogManager::createTable(std::string table_name, Attribute attribute, In
 	new_catalog.index = index;	//给new_catalog对象赋值
 	//从第一个block开始搜索
 	int i;
-	for (i = 0; i < catalog::buffer.getBlockNum(); i++) {
-		int page_id = catalog::buffer.getPageID(i);
-		if (page_id == -1) page_id = catalog::buffer.loadBlock(i);	//加载block i
+	for (i = 0; i < catalog_buffer.getBlockNum(); i++) {
+		int page_id = catalog_buffer.getPageID(i);
+		if (page_id == -1) page_id = catalog_buffer.loadBlock(i);	//加载block i
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		//如果block容量足够，则将新的catalog写入这个block
 		if (catalogSize(exist_catalogs) + sizeof(new_catalog) + 4 < PAGESIZE) {
 			exist_catalogs.push_back(new_catalog);
 			flushCatalogToPage(exist_catalogs, page_id);	//新catalog写入Page
-			//catalog::buffer.swapOutPage(page_id);	//Page写入Block
+			//catalog::catalog_buffer.swapOutPage(page_id);	//Page写入Block
 			return;
 		}
 	}
 	//如果现有block的空间都不够，则在一个新的block上加入记录
-	if (i == catalog::buffer.getBlockNum()) {
-		int page_id = catalog::buffer.loadBlock(i);	//加载block i（新的块）
+	if (i == catalog_buffer.getBlockNum()) {
+		int page_id = catalog_buffer.loadBlock(i);	//加载block i（新的块）
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		//如果block容量足够，则将新的catalog写入这个block
 		if (catalogSize(exist_catalogs) + sizeof(new_catalog) + 4 < PAGESIZE) {
 			exist_catalogs.push_back(new_catalog);
 			flushCatalogToPage(exist_catalogs, page_id);	//新catalog写入Page
-			//catalog::buffer.swapOutPage(page_id);	//Page写入Block
+			//catalog::catalog_buffer.swapOutPage(page_id);	//Page写入Block
 			return;
 		}
 	}
@@ -85,11 +86,12 @@ void CatalogManager::createTable(std::string table_name, Attribute attribute, In
 
 bool CatalogManager::havetable(std::string table_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	bool havetable = false;
 	//从第一个block开始搜索
-	for (int i = 0; i < catalog::buffer.getBlockNum() && havetable == false; i++) {
-		int page_id = catalog::buffer.getPageID(i);
-		if (page_id == -1) page_id = catalog::buffer.loadBlock(i);	//加载block i
+	for (int i = 0; i < catalog_buffer.getBlockNum() && havetable == false; i++) {
+		int page_id = catalog_buffer.getPageID(i);
+		if (page_id == -1) page_id = catalog_buffer.loadBlock(i);	//加载block i
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		for (size_t j = 0; j < exist_catalogs.size(); j++) {
 			if (exist_catalogs[j].TableName == table_name) {
@@ -104,10 +106,11 @@ bool CatalogManager::havetable(std::string table_name)
 
 int CatalogManager::findTableBlock(std::string table_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	//从第一个block开始搜索
-	for (int i = 0; i < catalog::buffer.getBlockNum(); i++) {
-		int page_id = catalog::buffer.getPageID(i);
-		if (page_id == -1) page_id = catalog::buffer.loadBlock(i);	//加载block i
+	for (int i = 0; i < catalog_buffer.getBlockNum(); i++) {
+		int page_id = catalog_buffer.getPageID(i);
+		if (page_id == -1) page_id = catalog_buffer.loadBlock(i);	//加载block i
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		for (size_t j = 0; j < exist_catalogs.size(); j++) {
 			if (exist_catalogs[j].TableName == table_name) {
@@ -121,11 +124,12 @@ int CatalogManager::findTableBlock(std::string table_name)
 
 void CatalogManager::dropTable(std::string table_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	int block_id = findTableBlock(table_name);
 	if (block_id == -1) throw table_not_exist();	//表不存在，抛出table_not_exist
 	//装入
-	int page_id = catalog::buffer.getPageID(block_id);
-	if (page_id == -1) page_id = catalog::buffer.loadBlock(block_id);	//加载block i
+	int page_id = catalog_buffer.getPageID(block_id);
+	if (page_id == -1) page_id = catalog_buffer.loadBlock(block_id);	//加载block i
 	std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 	for (size_t j = 0; j < exist_catalogs.size(); j++) {
 		if (exist_catalogs[j].TableName == table_name) {	//找到table_name
@@ -139,11 +143,12 @@ void CatalogManager::dropTable(std::string table_name)
 
 Catalog CatalogManager::getCatalog(std::string table_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	int block_id = findTableBlock(table_name);
 	if (block_id == -1) throw table_not_exist();
 	else {
 		//装入
-		int page_id = catalog::buffer.getPageID(block_id);
+		int page_id = catalog_buffer.getPageID(block_id);
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog集
 		for (size_t j = 0; j < exist_catalogs.size(); j++) {
 			if (exist_catalogs[j].TableName == table_name) {	//找到table_name
@@ -263,12 +268,13 @@ void CatalogManager::showCatalog(std::string table_name)
 
 bool CatalogManager::haveAttribute(std::string table_name, std::string attribute_name, int& attribute_num)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	bool haveAttribute = false;
 	int block_id = findTableBlock(table_name);
 	if (block_id == -1) throw table_not_exist();
 	else {
 		//装入
-		int page_id = catalog::buffer.getPageID(block_id);
+		int page_id = catalog_buffer.getPageID(block_id);
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		for (size_t j = 0; j < exist_catalogs.size() && haveAttribute == false; j++) {
 			if (exist_catalogs[j].TableName == table_name) {	//找到table_name
@@ -299,11 +305,12 @@ Index CatalogManager::getIndex(std::string table_name)
 
 void CatalogManager::addIndex(std::string table_name, std::string attribute_name, std::string index_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	int block_id = findTableBlock(table_name);
 	if (block_id == -1) throw table_not_exist();
 	else {
 		//装入
-		int page_id = catalog::buffer.getPageID(block_id);
+		int page_id = catalog_buffer.getPageID(block_id);
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		for (size_t j = 0; j < exist_catalogs.size(); j++) {
 			if (exist_catalogs[j].TableName == table_name) {	//找到table_name
@@ -349,11 +356,12 @@ std::string CatalogManager::findAttributeThroughIndex(std::string table_name, st
 
 void CatalogManager::dropIndex(std::string table_name, std::string index_name)
 {
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
 	int block_id = findTableBlock(table_name);
 	if (block_id == -1) throw table_not_exist();
 	else {
 		//装入
-		int page_id = catalog::buffer.getPageID(block_id);
+		int page_id = catalog_buffer.getPageID(block_id);
 		std::vector<Catalog> exist_catalogs = loadCatalogFromPage(page_id);	//得到block中现有的catalog
 		for (size_t j = 0; j < exist_catalogs.size(); j++) {
 			if (exist_catalogs[j].TableName == table_name) {	//找到table_name
@@ -375,7 +383,8 @@ void CatalogManager::dropIndex(std::string table_name, std::string index_name)
 
 std::vector<Catalog> CatalogManager::loadCatalogFromPage(int page_id)
 {
-	char* page_pointer = catalog::buffer.getPagePointer(page_id);	//得到页地址
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
+	char* page_pointer = catalog_buffer.getPagePointer(page_id);	//得到页地址
 	std::vector<Catalog> catalog;	//创建空的catalog集合
 	//从头开始搜索
 	for (int i = 0; i < PAGESIZE; i++) {
@@ -399,7 +408,8 @@ int CatalogManager::catalogSize(std::vector<Catalog>& catalog)
 
 void CatalogManager::flushCatalogToPage(std::vector<Catalog>& catalog, int page_id)
 {
-	char* page_pointer = catalog::buffer.getPagePointer(page_id);
+	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页
+	char* page_pointer = catalog_buffer.getPagePointer(page_id);
 
 	char entity[PAGESIZE];
 	char* p = entity;
@@ -412,5 +422,5 @@ void CatalogManager::flushCatalogToPage(std::vector<Catalog>& catalog, int page_
 	}
 	
 	memcpy_s(page_pointer, PAGESIZE, entity, PAGESIZE);	//写入page
-	catalog::buffer.setDirty(page_id, true);	//设置脏页标记
+	catalog_buffer.setDirty(page_id, true);	//设置脏页标记
 }

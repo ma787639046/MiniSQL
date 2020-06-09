@@ -12,7 +12,7 @@
 
 #include "Table.h"
 #include "RecordManager.h"
-#include "IndexManager.h"
+#include "CatalogManager.h"
 
 class API {
 public:

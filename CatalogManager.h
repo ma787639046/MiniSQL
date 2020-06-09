@@ -28,9 +28,9 @@ public:
 	Index index;	//表的索引信息
 };
 
-namespace catalog {
-	BufferManager buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页（页可动态扩充）
-}
+//namespace catalog {
+//	BufferManager catalog_buffer(CATALOG_FILEPATH, 256);	//文件路径CATALOG_FILEPATH，缓冲区预留256个页（页可动态扩充）
+//}
 
 class CatalogManager {
 public:
