@@ -122,3 +122,21 @@ public:
 	void showTable(); //显示table数据
 	void showTable(int limit);	//显示至多limit行数据
 };
+
+
+
+typedef enum
+{
+    LESS,
+    LESS_E,
+    EQUAL,
+    GREATER_E,
+    GREATER,
+    NOT_E
+}CONDITION;
+
+struct condition
+{
+    key_ data;
+    CONDITION relation_condition;
+}
