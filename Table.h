@@ -31,6 +31,25 @@ typedef enum {
 	STRING
 } AttrType;
 
+//class keyAttr {
+//public:
+//	keyAttr() :name(""), isUnique(false), hasIndex(false) {};	//默认构造函数
+//	std::string name;	//存放每个属性的名字
+//	AttrType type;	//存放每个属性的类型
+//	size_t maxStringSize;	//如果type = STRING，则最大的string长度是多少
+//	bool isUnique;	//判断每个属性是否unique，是为true
+//	bool hasIndex;	//对应属性值是否存在索引
+//};
+//
+//class Attribute {
+//public:
+//	Attribute();
+//	Attribute(const Attribute& attr);	//拷贝构造函数
+//	int primary_key;	//判断是否存在主键,-1为不存在，其他则为主键的所在位置
+//	std::vector<keyAttr> attr;	//储存每个key的attribute信息
+//};
+
+
 class Attribute {
 public:
 	Attribute();
@@ -41,6 +60,7 @@ public:
 	bool unique[32];	//判断每个属性是否unique，是为true
 	int primary_key;	//判断是否存在主键,-1为不存在，其他则为主键的所在位置
 	bool index[32];	//对应属性值是否存在索引
+	size_t maxStringSize[32];	//如果type = STRING，则最大的string长度是多少
 };
 
 /* 下面定义了Index */

@@ -4,6 +4,8 @@
 //
 #include "API.h"
 
+
+
 void API::createTable(std::string table_name, Attribute attribute, Index index)
 {
 	catalog_manager.createTable(table_name, attribute, index);
