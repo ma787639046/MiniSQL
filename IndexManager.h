@@ -4,9 +4,6 @@
 class IndexManager
 {
     //Index Type Selection
-//    typedef std::map<std::string, BPlusTree<int> *> int_map;
-//    typedef std::map< std::string, BPlusTree<float> > float_map;
-//    typedef std::map< std::string, BPlusTree<std::string> > string_map;
     std::map<std::string, BPlusTree<int> *> index_int_map;
     std::map< std::string, BPlusTree<float> > index_float_map;
     std::map< std::string, BPlusTree<std::string> > index_string_map;
