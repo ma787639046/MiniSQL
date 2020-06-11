@@ -1,215 +1,112 @@
-//
-//  BufferManager.cpp
-//  Created by MGY on 2020/06/02
-//
-
 #include "BufferManager.h"
-#include "const.h"
 
-// Page类
-Page::Page() {
-    memset(buffer, 0, PAGESIZE);
-    block_id = -1;
-    pinNum = 0;
-    dirty = false;
-    valid = false;
+// 析构函数:将缓冲池里的所有页写回磁盘。
+BufferManager::~BufferManager() {
+    for (int i = 0; i < PageNum; i++)
+        if (BufferPool[i].getDirty())
+            swapOutPage(i , BufferPool[i].getFileName(), BufferPool[i].getBlockId());
 }
 
-Page::~Page() {}
-
-inline char* Page::getPagePointer() {
-    return this->buffer;
-}
-
-inline void Page::setBlockID(int ID) {
-    this->block_id = ID;
-}
-
-inline int Page::getBlockID() {
-    return this->block_id;
-}
-
-inline void Page::pin()
-{
-    this->pinNum++;
-}
-
-inline void Page::unpin()
-{
-    this->pinNum--;
-}
-
-inline int Page::getPinNum()
-{
-    return this->pinNum;
-}
-
-inline bool Page::getDirty()
-{
-    return this->dirty;
-}
-
-inline void Page::setDirty(bool dirty)
-{
-    this->dirty = dirty;
-}
-
-inline bool Page::getValid()
-{
-    return this->valid;
-}
-
-inline void Page::setValid(bool valid)
-{
-    this->valid = valid;
-}
-
-BufferManager::BufferManager(std::string filename, size_t buffer_size)
-{
-    Buffer.reserve(buffer_size); //保留buffer_size个Page的空间，以提高malloc速度
-    this->filename = filename;
-    this->buffer_size = buffer_size;
-}
-
-BufferManager::~BufferManager()
-{
-    for (int i = 0; i < (int)Buffer.size(); i++) {
-        if (Buffer[i].getValid() == true && Buffer[i].getDirty() == true) {
-            swapOutPage(i); // valid且dirty，swap out这个Page
-        }
+char* BufferManager::getPage(std::string file_name , int blockID) {
+    int pageID = getPageId(file_name , blockID);
+    if (pageID == -1) {
+        pageID = getEmptyPageId();
+        loadDiskBlock(pageID , file_name , blockID);
     }
-    Buffer.clear();
+    BufferPool[pageID].setFirstLoaded(true);
+    return BufferPool[pageID].getPagePointer();
 }
 
-std::string BufferManager::getFilename()
-{
-    return this->filename;
+void BufferManager::setDirty(int pageID) {
+    BufferPool[pageID].setDirty(true);
 }
 
-int BufferManager::getBlockID(int page_id)
-{
-    return Buffer[page_id].getBlockID();
+void BufferManager::pinPage(int pageID) {
+    BufferPool[pageID].pin();
 }
 
-int BufferManager::getPageID(int block_id)
-{
-    //从头线性扫描所有Page，获得对应的PageID。没有则返回-1
-    for (int i = 0; i < (int)Buffer.size(); i++) {
-        if (this->filename == filename && Buffer[i].getBlockID() == block_id) {
+int BufferManager::unpinPage(int pageID) {
+    int pin_count = BufferPool[pageID].getPinNum();
+    if (pin_count <= 0) 
+        return -1;
+    else
+        BufferPool[pageID].unpin();
+    return 0;
+}
+
+// 核心函数之一。内存和磁盘交互的接口。
+int BufferManager::loadDiskBlock(int pageID , std::string file_name , int blockID) {
+    // 初始化一个页
+    // BufferPool[pageID].clear();
+    // 打开磁盘文件
+    FILE* file = fopen(file_name.c_str() , "r");
+    // 打开失败返回-1
+    if (file == NULL)
+        return -1;
+    // 将文件指针定位到对应位置
+    fseek(file , PAGESIZE * blockID , SEEK_SET);
+    // 获取页的句柄
+    char* buffer = BufferPool[pageID].getPagePointer();
+    // 读取对应磁盘块到内存页
+    fread(buffer , PAGESIZE , 1 , file);
+    // 关闭文件
+    fclose(file);
+    // 对新载入的页进行相应设置
+    BufferPool[pageID].setFileName(file_name);
+    BufferPool[pageID].setBlockId(blockID);
+    BufferPool[pageID].setDirty(false);
+    BufferPool[pageID].setFirstLoaded(true);    // 第一次不会被替换
+    BufferPool[pageID].setValid(false);
+    return 0;
+}
+
+// 核心函数之一。内存和磁盘交互的接口。
+void BufferManager::swapOutPage(int pageID , std::string file_name , int blockID) {
+    // 打开文件
+    FILE* file = fopen(file_name.c_str() , "r+");
+    // 将文件指针定位到对应位置
+    fseek(file , PAGESIZE * blockID , SEEK_SET);
+    // 获取页的句柄
+    char* buffer = BufferPool[pageID].getPagePointer();
+    // 将内存页的内容写入磁盘块
+    fwrite(buffer , PAGESIZE , 1 , file);
+    // 关闭文件
+    fclose(file);
+}
+
+// 简单遍历获取页号
+int BufferManager::getPageId(std::string file_name , int blockID) {
+    for (int i = 0;i < PageNum;i++) {
+        if (BufferPool[i].getFileName() == file_name && BufferPool[i].getBlockId() == blockID)
             return i;
-        }
     }
     return -1;
 }
 
-int BufferManager::loadBlock(int block_id)
-{
-    int PageID = -1;
-    if (Buffer.size() < this->buffer_size) {
-        Page* page = new Page();
-        Buffer.push_back(*page);    //分配页
-        PageID = Buffer.size() - 1;
+// 寻找一个闲置的页
+int BufferManager::getEmptyPageId() {
+    // 先简单的遍历一遍，如果有闲置的直接返回其页号
+    for (int i = 0;i < PageNum;i++) {
+        if (BufferPool[i].getValid() == true)
+            return i;
     }
-    else {
-        //Buffer已满，先寻找valid==false的页
-        for (int i = 0; i < (int)Buffer.size(); i++) {
-            if (Buffer[i].getValid() == false) PageID = i;
+    while (1) {
+        // 如果页的ref为true，将其设为false
+        if (BufferPool[clockPos].getFirstLoaded() == true) BufferPool[clockPos].setFirstLoaded(false);      
+        // 否则，如果页没有被锁住，那么这一页就会被删除
+        else if (BufferPool[clockPos].getPinNum() == 0) {
+            // 如果这一页被改动过，需要将其写回磁盘，然后删除
+            if (BufferPool[clockPos].getDirty() == true) {
+                std::string file_name = BufferPool[clockPos].getFileName();
+                int blockID = BufferPool[clockPos].getBlockId();
+                swapOutPage(clockPos , file_name , blockID);
+            }
+            // 删除页
+            BufferPool[clockPos].clear();
+            // 返回页号
+            return clockPos;
         }
-        //找不到unvalid的Page，则swap out一个Page。（这里有待加入一个页替换策略）
-        if (PageID == -1) {
-            swapOutPage(0);
-            PageID = 0;
-        }
+        // 时钟指针顺时针转动
+        clockPos = (clockPos + 1) % PageNum;
     }
-    FILE* file = fopen((this->filename).c_str(), "r");
-    if (file == nullptr) {  //读不到file，则创建空文件。理论上，文件由Record Manager、Catalog Manager等模块创建、删除。文件是否存在应由上游模块检查。 
-        file = fopen((this->filename).c_str(), "w");
-        fwrite("", 1, 0, file);
-        fclose(file);
-        file = fopen((this->filename).c_str(), "r");
-    }
-    fseek(file, block_id * PAGESIZE, 0);    //定位文件指针
-    fread(Buffer[PageID].getPagePointer(), PAGESIZE, 1, file);  //读取PAGESIZE bytes至Page中
-    fclose(file);
-    Buffer[PageID].setBlockID(block_id);
-    Buffer[PageID].setDirty(false);
-    Buffer[PageID].setValid(true);
-    return PageID;
 }
-
-void BufferManager::swapOutPage(int page_id)
-{
-    if (getDirty(page_id) == true) {
-        //写入block
-        FILE* file = fopen((this->filename).c_str(), "r+");
-        fseek(file, Buffer[page_id].getBlockID() * PAGESIZE, 0);    //定位文件指针
-        fwrite(getPagePointer(page_id), PAGESIZE, 1, file); //写入
-        fclose(file);
-    }
-    setValid(page_id, false);
-}
-
-char* BufferManager::getPagePointer(int page_id)
-{
-    return Buffer[page_id].getPagePointer();
-}
-
-void BufferManager::pinPage(int page_id)
-{
-    Buffer[page_id].pin();
-}
-
-void BufferManager::unpinPage(int page_id)
-{
-    Buffer[page_id].unpin();
-}
-
-bool BufferManager::getPin(int page_id)
-{
-    return Buffer[page_id].getPinNum() > 0;
-}
-
-void BufferManager::setDirty(int page_id, bool status)
-{
-    Buffer[page_id].setDirty(status);
-}
-
-bool BufferManager::getDirty(int page_id)
-{
-    return Buffer[page_id].getDirty();
-}
-
-void BufferManager::setValid(int page_id, bool status)
-{
-    Buffer[page_id].setValid(status);
-}
-
-bool BufferManager::getValid(int page_id)
-{
-    return Buffer[page_id].getValid();
-}
-
-int BufferManager::getBlockNum()
-{
-    struct _stat info;
-    _stat(this->filename.c_str(), &info);
-    int size = info.st_size;
-    return size/PAGESIZE;
-}
-
-//测试用main
-
-//int main() {
-//    BufferManager buffer("Buffer.db");
-//    int page_id = buffer.loadBlock(buffer.getFilename(), 0);
-//    //写入对象的测试
-//    /*std::string s = "123456";
-//    char* page = buffer.getPagePointer(page_id);
-//    memcpy_s(page, PAGESIZE, &s, sizeof(s));
-//    buffer.setDirty(page_id, true);*/
-//    //读取对象的测试
-//    /*char* page = buffer.getPagePointer(page_id);
-//    std::string s = *(std::string*)page;
-//    std::cout << s << std::endl;*/
-//    return 0;
-//}

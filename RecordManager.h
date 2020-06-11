@@ -13,6 +13,7 @@
 #pragma once
 
 #include <sstream>
+#include <fstream>
 #include "BufferManager.h"
 #include "CatalogManager.h"
 #include "Table.h"
@@ -20,14 +21,20 @@
 //	std::vector<key_> tuple;	//一条tuple，Tuple = (key1, key2, key3 ……) 
 //	std::vector<Tuple> Record;	//表的记录，包含多条Tuple
 
-
-
-
+extern BufferManager buffer_manager;
 
 class RecordManager {
 public:
 	void createTableFile(std::string table_name);	//创建表Record文件
 	void dropTableFile(std::string table_name);		//删除表Record文件
+
+	// insertRecord()：向名为table_name中的表格，插入一条tuple记录
+	// 输入：表名，tuple
+	// 输出：无
+	// 异常处理：1、table_name对应的表名在catalog中不存在，抛出table_not_exist
+	//			2、插入重复的主键，抛出primary_key_conflict
+	//			3、属性unique，插入重复的值，抛出unique_conflict异常
+	void insertRecord(std::string table_name, Tuple tuple);
 	
 	// deleteRecord(std::string table_name)：删除名为table_name表中的所有Record（不删除文件，文件需调用dropTableFile()删除）
 	// 输入：表名
@@ -42,19 +49,11 @@ public:
 	//			2、Attribute的类型与输入的relation 不匹配，抛出key_type_conflict
 	int deleteRecord(std::string table_name, std::vector<Relation> relation);
 
-	// insertRecord()：向名为table_name中的表格，插入一条tuple记录
-	// 输入：表名，tuple
-	// 输出：无
-	// 异常处理：1、table_name对应的表名在catalog中不存在，抛出table_not_exist
-	//			2、插入重复的主键，抛出primary_key_conflict
-	//			3、属性unique，插入重复的值，抛出unique_conflict异常
-	void insertRecord(std::string table_name, Tuple& tuple);
-
-	// loadRecord(std::string table_name): 将table_name中所有的tuples装载至这个vector
+	// loadRecord(std::string table_name): 返回整张表
 	// 输入：表名
-	// 输出：vector<Tuple>
+	// 输出：Table表
 	// 异常处理：1、table_name对应的表名在catalog中不存在，抛出table_not_exist
-	std::vector<Tuple> loadRecord(std::string table_name);	//将table_name中所有的tuples装载至这个vector
+	Table loadRecord(std::string table_name);	//将table_name中所有的tuples装载至这个vector
 
 	// loadRecord(std::string table_name, std::vector<Relation> relation): 将table_name中所有满足relation关系
 	//																		的tuples装载至这个vector
@@ -63,26 +62,41 @@ public:
 	// 异常处理：1、table_name对应的表名在catalog中不存在，抛出table_not_exist
 	//			2、relation中，名为Attribute name的Attribute不存在，则抛出attribute_not_exist
 	//			3、Attribute的类型与输入的relation 不匹配，抛出key_type_conflict
-	std::vector<Tuple> loadRecord(std::string table_name, std::vector<Relation> relation);	//将table_name中所有满足relation关系的tuples装载至这个vector
+	Table loadRecord(std::string table_name, std::vector<Relation> relation);	//将table_name中所有满足relation关系的tuples装载至这个vector
 private:
-	void setBlockStringSize(int size, std::string& s);		//设置block的已用空间大小
-	void setTupleStringSize(int size, std::string& s);		//设置Tuple的个数
-	std::string createFormatedBlockString();	//创建一个可以刷入block的string
-	int getBlockStringSize(std::string s);	//读取BlockString的已用空间的总大小
-	int getTupleNum(std::string s);	//获取Block中Tuple的个数
-	void writeTupleString(std::string& s, Tuple& tuple);	//向s中写入一个Tuple
-	int getTupleSize(Tuple tuple);	//返回一个tuple encode为string后的大小
-	std::vector<Tuple> decodeTupleString(const std::string s);	//将所有的Tuple读取至一个vector中
-	bool meetRelation(key_ key, Relation relation);	//判断key是否满足单条relation关系，是返回true，否返回false
-
-	void flushToBlock(std::string s, int block_id, std::string table_name);	//将Record记录刷入对应的page中
-	std::string loadBlockString(int block_id, std::string table_name);	//将一个block装载至string中
+	//将Tuple转换为string形式，方便储存。
+	//Tuple = 4bytes的Tuple size:n + (4 bytes key_type + 4 bytes INT + 4 bytes FLOAT + 4 bytes sizeof(STRING_VALUE) + STRING_VALUE)*n
+	std::string encodeTuple(Tuple tuple);	
+	//将string形式的Tuple解码。offset定位于下一个tuple或结尾，用于连续使用decodeTuple
+	Tuple decodeSingleTuple(char* pointer, int& offset);
+	//连续调用decodeSingleTuple()，将获得的所有tuple储存至数组中返回
+	std::vector<Tuple> decodeAllTuple(char* pointer);
+	//获取文件有多少个块
+	int getBlockNumber(std::string table_name);
+	//设置文件的块数
+	void setBlockNumber(int block_number, std::string table_name);
+	//创建一个可以刷入block的string
+	std::string createFormatedBlockString();
+	//设置block的已用空间大小
+	void setBlockStringSize(int size, char* pointer);
+	//设置Tuple的个数
+	void setTupleStringSize(int size, char* pointer);
+	//读取BlockString的已用空间的总大小
+	int getBlockStringSize(char* pointer);
+	//获取Block中Tuple的个数
+	int getTupleNum(char* pointer);
+	//向pointer中写入一个Tuple
+	void writeTupleString(char* pointer, std::string encoded_tuple);
+	//判断key是否满足单条relation关系，是返回true，否返回false
+	bool meetRelation(key_ key, Relation relation);
+	//判断名为table_name的表格中第i位置是否存在相同的key，为判断重复服务
+	bool haveSameKey(Table& table, int i, key_ key);
 };
 
 /*
 RecordManager工作原理：
 1、RecordManager以page/block为单位进行读取、写入操作。
-2、数据储存格式为：4 bytes的已用空间 + 4 bytes的tuple个数 + n个tuple
+2、数据储存格式为："####" + 4 bytes的已用空间 + 4 bytes的tuple个数 + n个tuple
 3、tuple的存储格式为：4bytes的Tuple size:n + (4 bytes INT + 4 bytes FLOAT + 4 bytes sizeof(STRING_VALUE) + STRING_VALUE)*n
 RecordManager读取、写入tuple原理：
 写入tuple：

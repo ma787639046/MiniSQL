@@ -14,13 +14,10 @@
 #include "RecordManager.h"
 #include "CatalogManager.h"
 
+BufferManager buffer_manager;
+
 class API {
-private:
-    CatalogManager catalog_manager;
-    RecordManager record_manager;
 public:
-    API();
-    ~API();
 	//createTable(): 创建表
 	//输入：表名，
 	//		属性：个数、名称、类型、是否unique、主键（没有主键设为-1，有主键写对应下标。
@@ -58,9 +55,13 @@ public:
 	//			2、插入重复的主键，抛出primary_key_conflict
 	//			3、属性unique，插入重复的值，抛出unique_conflict异常
 	//注意：这个函数不会检查tuple类型、个数是否与Attribute匹配。检查请务必放在Interpreter执行！！！！
-	void insertRecord(std::string table_name, Tuple& tuple);
+	void insertRecord(std::string table_name, Tuple tuple);
 
-    int generate_index(std::string table_name, std::string attribute_name, std::string index_name, int * string_sizes);//generate an index based on the attribute of the table
-    int delete_index(std::string table_name, std::string index_name, int * string_sizes);//delete the index
+	//showAttributeInfo()：打印表的属性信息
+	//输入：表名，tuple
+	void showAttributeInfo(std::string table_name);
 
+private:
+	CatalogManager catalog_manager;
+	RecordManager record_manager;
 };

@@ -21,11 +21,19 @@
 
 void RecordManager::createTableFile(std::string table_name)
 {
-	table_name = RECORD_PATH + table_name + ".db";
-	FILE* f = fopen(table_name.c_str(), "w");
-	fclose(f);
+	int blocknum = 2;	//第一块记录blocknum信息，记录储存从第二块开始
 	std::string empty_block = createFormatedBlockString();
-	flushToBlock(empty_block, 0, table_name);	//将FormatedBlock刷入文件头
+	std::string table_path = RECORD_PATH + table_name + ".db";
+	std::ofstream fs(table_path);
+	fs.write("####", sizeof(int));	//写入文件头
+	fs.write((char*)&blocknum, sizeof(int));
+	for (size_t i = 0; i < PAGESIZE - 2 * sizeof(int); i++)
+		fs.write("\0", 1);	//补充至PAGESIZE
+	fs << empty_block;	//在第二块写入块头信息
+	//FILE* f = fopen(table_path.c_str(), "w");
+	//for (size_t i = 0; i < empty_block.size(); i++)
+	//	fputc(empty_block[i], f);
+	//fclose(f);
 }
 
 void RecordManager::dropTableFile(std::string table_name)
@@ -34,23 +42,88 @@ void RecordManager::dropTableFile(std::string table_name)
 	remove(table_name.c_str());
 }
 
+void RecordManager::insertRecord(std::string table_name, Tuple tuple)
+{
+	// 判断对应表名是否存在
+	CatalogManager catalog_manager;
+	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
+	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
+	std::vector<key_> keys = tuple.getKeys();
+	// 判断Tuple与attribute类型是否一一对应
+	for (size_t i = 0; i < keys.size(); i++) {
+		if (keys[i].type != attribute.type[i])
+			throw tuple_type_conflict();
+	}
+	// 预判断是否有Unique的值
+	bool haveUnique = false;
+	for (size_t i = 0; i < attribute.num; i++) {
+		if (attribute.unique[i] == true) {
+			haveUnique = true;
+			break;
+		}
+	}
+	// 根据haveUnique，决定是否进行unique检查
+	// 预判断的目的是，如果没有unique，则节省了loadRecord(table_name)的消耗
+	if (haveUnique) {
+		Table table = loadRecord(table_name);
+		// 判断unique值是否重复
+		for (size_t i = 0; i < attribute.num; i++) {
+			if (attribute.unique[i] == true) {
+				if (haveSameKey(table, i, keys[i])) {
+					// 发现相同的值，抛出异常
+					if (i == attribute.primary_key) throw primary_key_conflict();
+					else throw unique_conflict();
+				}
+			}
+		}
+	}
+	// encode待插入的Tuple
+	std::string encodedTuple = encodeTuple(tuple);
+	// 获取总block数量
+	int block_number = getBlockNumber(table_name);
+	// 获得最后一个block的pointer
+	std::string table_path = RECORD_PATH + table_name + ".db";
+	char* page_pointer = buffer_manager.getPage(table_path, block_number - 1);
+	// 判断空间是否充足
+	if (getBlockStringSize(page_pointer) + encodedTuple.size() < PAGESIZE) {
+		// 空间充足
+		writeTupleString(page_pointer, encodedTuple);
+		setBlockStringSize(getBlockStringSize(page_pointer) + encodedTuple.size(), page_pointer);
+		setTupleStringSize(getTupleNum(page_pointer) + 1, page_pointer);
+		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number - 1));
+	}
+	else {
+		// 空间不足，开新的页
+		setBlockNumber(getBlockNumber(table_name) + 1, table_name);	//块数+1
+		page_pointer = buffer_manager.getPage(table_path, block_number);
+		// 写入页头
+		std::string empty_block = createFormatedBlockString();
+		for (size_t i = 0; i < empty_block.size(); i++)
+			page_pointer[i] = empty_block[i];
+		// 写入tuple
+		writeTupleString(page_pointer, encodedTuple);
+		setBlockStringSize(getBlockStringSize(page_pointer) + encodedTuple.size(), page_pointer);
+		setTupleStringSize(getTupleNum(page_pointer) + 1, page_pointer);
+		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number));
+	}
+}
+
 int RecordManager::deleteRecord(std::string table_name)
 {
 	int deleteNum = 0;	//统计删除了多少条记录
 	// 判断对应表名是否存在
-	CatalogManager* catalog_manager = new CatalogManager();
-	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
-	delete(catalog_manager);
-	// 获取总block数量（这里不用担心储存record的db文件被删除，因为getBlockNum()会返回0）
-	BufferManager* buffer_manager = new BufferManager(table_name, 1);
-	int block_number = buffer_manager->getBlockNum();
-	delete(buffer_manager);
+	CatalogManager catalog_manager;
+	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
+	// 获取总block数量
+	std::string filename = RECORD_PATH + table_name + ".db";
+	int block_number = getBlockNumber(table_name);
 	// 从第一个block开始，装入Tuple
 	for (int i = 0; i < block_number; i++) {
-		std::string s = loadBlockString(i, table_name);	//装入block
-		deleteNum += getTupleNum(s);	//获取当前block有多少条记录
-		s = createFormatedBlockString();	//创建空的formated string
-		flushToBlock(s, i, table_name);	//刷入对应page中
+		char* page_pointer = buffer_manager.getPage(filename, i);
+		deleteNum += getTupleNum(page_pointer);	//获取当前block有多少条记录
+		setTupleStringSize(0, page_pointer);	//清除所有记录
+		setBlockStringSize(3 * sizeof(int), page_pointer);	//重置block size
+		buffer_manager.setDirty(buffer_manager.getPageId(filename, i));		//设置脏页
 	}
 	return deleteNum;
 }
@@ -59,300 +132,266 @@ int RecordManager::deleteRecord(std::string table_name, std::vector<Relation> re
 {
 	int deleteNum = 0;	//统计删除了多少条tuple
 	std::vector<int> index;	//按顺序储存relation中，属性的序号
-	int temp = 0;
 	// 判断对应表名是否存在
-	CatalogManager* catalog_manager = new CatalogManager();
-	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
-	for (size_t i = 0; i < relation.size(); i++) {
-		if (!catalog_manager->haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
+	CatalogManager catalog_manager;
+	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
+	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
+	for (int i = 0, temp = 0; i < relation.size(); i++) {
+		if (!catalog_manager.haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
 		index.push_back(temp);	//存入属性的序号
 	}
-	Attribute attribute = catalog_manager->getAttribute(table_name);	//获取表的所有属性信息
-	delete(catalog_manager);
 	// 检查Attribute的类型与输入的relation是否匹配
 	for (size_t i = 0; i < relation.size(); i++) {
-		if (attribute.type[index[i]] != relation[i].attributeType) throw key_type_conflict();
+		if (attribute.type[index[i]] != relation[i].key.type) throw key_type_conflict();
 	}
-	// 获取总block数量（这里不用担心储存record的db文件被删除，因为getBlockNum()会返回0）
-	BufferManager* buffer_manager = new BufferManager(table_name, 1);
-	int block_number = buffer_manager->getBlockNum();
-	delete(buffer_manager);
-
-	//异常检查完毕，开始遍历record，寻找符合条件的tuple
-	std::string formatedString;
-	formatedString.reserve(PAGESIZE);
-	for (int block_id = 0; block_id < block_number; block_id++) {
-		formatedString = loadBlockString(block_id, table_name);
-		std::vector<Tuple> current_record = decodeTupleString(formatedString);	//获得当前block中的tuples
-		std::vector<Tuple> new_record;	//储存删除后的tuple
-		//依次判断是否tuple是否满足relation
-		for (size_t j = 0; j < current_record.size(); j++) {//对于每一个tuple
-			std::vector<key_> current_tuple = current_record[j].getTuple();	//获得这条tuple
-			bool meetRelation = true;
-			for (size_t k = 0; k < relation.size(); k++) {//对于每一个relation
-				meetRelation = this->meetRelation(current_tuple[index[k]], relation[k]);
-				if (meetRelation == false) break;
+	// 建立表对象
+	Table table(table_name, attribute);
+	// 获取总block数量
+	int block_number = getBlockNumber(table_name);
+	// 从第一个block开始，装入Tuple
+	std::vector<Tuple>& tuple = table.getTuple();
+	std::string filename = RECORD_PATH + table_name + ".db";
+	// 从第一个block开始，装入Tuple
+	for (int i = 0; i < block_number; i++) {
+		char* page_pointer = buffer_manager.getPage(filename, i);
+		int offset = 3 * sizeof(int);
+		// 获得tuple个数
+		int tuple_num = getTupleNum(page_pointer);
+		for (int i = 0; i < tuple_num; i++) {
+			int ori_offset = offset;	//记录旧的offset
+			Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple，offset移动至下条记录
+			std::vector<key_> keys = temp.getKeys();
+			bool isRelation = true;
+			for (size_t m = 0; m < relation.size(); m++) {
+				isRelation = meetRelation(keys[index[m]], relation[m]);
+				if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
 			}
-			if (meetRelation == false) {	//不满足所有条件，保留这条tuple
-				new_record.push_back(current_record[j]);
+			// 满足条件，删除这个tuple
+			if (isRelation) {
+				deleteNum++;	//删除条目数+1
+				for (int j = ori_offset; j < getBlockStringSize(page_pointer) - offset && j < PAGESIZE; j++ ) {
+					page_pointer[j] = page_pointer[offset - ori_offset + j];	//将后面的数据覆盖到前面
+					setTupleStringSize(getTupleNum(page_pointer) - 1, page_pointer);	//记录数 - 1
+					setBlockStringSize(getBlockStringSize(page_pointer)  - offset + ori_offset, page_pointer);	//设置block size
+				}
+				buffer_manager.setDirty(buffer_manager.getPageId(filename, i));		//设置脏页
+				offset = ori_offset;	//offset移回当前起始位置
 			}
 		}
-		if (new_record.size() < current_record.size()) {//新的tuple数量变少，说明有删除情况
-			std::string newFormatedString = createFormatedBlockString();
-			for (size_t m = 0; m < new_record.size(); m++)
-				writeTupleString(newFormatedString, new_record[m]);	//创建新的formatedString
-			flushToBlock(newFormatedString, block_id, table_name);	//将新tuple刷入对应block_id的page中
-			deleteNum += current_record.size() - new_record.size();	//统计删了几条tuple
-		}		
 	}
 	return deleteNum;
 }
 
-void RecordManager::insertRecord(std::string table_name, Tuple& tuple)
+Table RecordManager::loadRecord(std::string table_name)
 {
 	// 判断对应表名是否存在
-	CatalogManager* catalog_manager = new CatalogManager();
-	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
-	Attribute attribute = catalog_manager->getAttribute(table_name);	//获取表的所有属性信息
-	delete(catalog_manager);
-	// 判断主键插入是否重复
-	std::vector<key_> keys = tuple.getTuple();	//获取一条tuple
-	if (attribute.primary_key != -1) {
-		Relation search_relation;
-		search_relation.attributeName = attribute.name[attribute.primary_key];	//获得主键属性名
-		if (attribute.type[attribute.primary_key] == INT) 
-			search_relation.key.INT_VALUE = keys[attribute.primary_key].INT_VALUE;
-		else if (attribute.type[attribute.primary_key] == FLOAT)
-			search_relation.key.FLOAT_VALUE = keys[attribute.primary_key].FLOAT_VALUE;
-		else if (attribute.type[attribute.primary_key] == STRING)
-			search_relation.key.STRING_VALUE = keys[attribute.primary_key].STRING_VALUE;	//获得主键值
-		search_relation.sign = EQUAL;	//等于
-		std::vector<Relation> search_relation_vector;
-		search_relation_vector.push_back(search_relation);
-		std::vector<Tuple> record = loadRecord(table_name, search_relation_vector);	//搜索是否存在相同主键
-		if (record.size() > 0) throw primary_key_conflict();	//存在重复主键，抛出primary_key_conflict
-		search_relation_vector.clear();
-	}
-	// 判断unique值是否重复
-	if (attribute.attributeNumber != keys.size()) throw key_type_conflict();	//传入的tuple中key个数与attribute个数不一致，抛出key_type_conflict
-	for (size_t i = 0; i < attribute.attributeNumber; i++) {
-		if (attribute.unique[i] == true) {
-			// 第i个属性为unique，需要判断unique值是否存在重复
-			Relation search_relation;
-			search_relation.attributeName = attribute.name[i];	//获得unique key的属性名
-			if (attribute.type[i] == INT)
-				search_relation.key.INT_VALUE = keys[i].INT_VALUE;
-			else if (attribute.type[i] == FLOAT)
-				search_relation.key.FLOAT_VALUE = keys[i].FLOAT_VALUE;
-			else if (attribute.type[i] == STRING)
-				search_relation.key.STRING_VALUE = keys[i].STRING_VALUE;	//获得unique key的值
-			search_relation.sign = EQUAL;	//等于
-			std::vector<Relation> search_relation_vector;
-			search_relation_vector.push_back(search_relation);
-			std::vector<Tuple> record = loadRecord(table_name, search_relation_vector);	//搜索是否存在相同unique key
-			if (record.size() > 0) throw unique_conflict();	//存在重复主键，抛出unique_conflict
-			search_relation_vector.clear();
-		}
-	}
-	//异常检查完毕，开始插入这条tuple
-	std::string table_path = RECORD_PATH + table_name + ".db";
-	BufferManager * bufffer_manager = new BufferManager(table_path, 1);	//因为只需获取block number，所以无需较多page
-	int blocknum = bufffer_manager->getBlockNum();
-	delete(bufffer_manager);
-	std::string formatedString;
-	formatedString.reserve(PAGESIZE);
-	for (size_t i = 0; i < blocknum; i++) {
-		formatedString = loadBlockString(i, table_name);
-		if (getBlockStringSize(formatedString) + getTupleSize(tuple) < PAGESIZE) {//空间足够
-			writeTupleString(formatedString, tuple);	//写入tuple
-			flushToBlock(formatedString, i, table_name);	//将新tuple刷入对应block_id的page中
-			return;
-		}
-	}
-	//所有block均无足够大的空间，容纳新的tuple，则在新的block储存tuple
-	formatedString = createFormatedBlockString();	//格式化formatedString
-	if (getBlockStringSize(formatedString) + getTupleSize(tuple) < PAGESIZE) {
-		writeTupleString(formatedString, tuple);	//写入tuple
-		flushToBlock(formatedString, blocknum, table_name);	//将新tuple刷入对应block_id = blocknum的page中
-	}
-	else throw tuple_out_of_range();	//tuple太大了，抛出tuple_out_of_range
-}
-
-std::vector<Tuple> RecordManager::loadRecord(std::string table_name)
-{
-	// 判断对应表名是否存在
-	CatalogManager* catalog_manager = new CatalogManager();
-	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
-	delete(catalog_manager);
-	// 获取总block数量（这里不用担心储存record的db文件被删除，因为getBlockNum()会返回0）
-	BufferManager* buffer_manager = new BufferManager(table_name, 1);
-	int block_number = buffer_manager->getBlockNum();
-	delete(buffer_manager);
+	CatalogManager catalog_manager;
+	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
+	// 获得表属性
+	Attribute attr = catalog_manager.getAttribute(table_name);
+	// 建立表对象
+	Table table(table_name, attr);
+	// 获取总block数量
+	int block_number = getBlockNumber(table_name);
 	// 从第一个block开始，装入Tuple
-	std::vector<Tuple> tuple;
+	std::vector<Tuple>& tuple = table.getTuple();
+	std::string filepath = RECORD_PATH + table_name + ".db";
 	for (int i = 0; i < block_number; i++) {
-		std::string s = loadBlockString(i, table_name);	//装入block
-		std::vector<Tuple> temp = decodeTupleString(s);	//decode blockString为vector<Tuple>
-		for (int j = 0; j < temp.size(); j++)
-			tuple.push_back(temp[i]);
-		temp.clear();
+		// 获得页指针
+		char* page_pointer  = buffer_manager.getPage(filepath ,i);
+		int offset = 3 * sizeof(int);
+		// 获得tuple个数
+		int tuple_num = getTupleNum(page_pointer);
+		for (int i = 0; i < tuple_num; i++) {
+			// 逐个写入table
+			tuple.push_back(decodeSingleTuple(page_pointer, offset));
+		}
 	}
-	return tuple;
+	return table;
 }
 
-std::vector<Tuple> RecordManager::loadRecord(std::string table_name, std::vector<Relation> relation)
+Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> relation)
 {
 	std::vector<int> index;	//按顺序储存relation中，属性的序号
-	int temp = 0;
 	// 判断对应表名是否存在
-	CatalogManager* catalog_manager = new CatalogManager();
-	if (!catalog_manager->havetable(table_name)) throw table_not_exist();
-	for (size_t i = 0; i < relation.size(); i++) {
-		if (!catalog_manager->haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
+	CatalogManager catalog_manager;
+	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
+	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
+	for (int i = 0, temp = 0; i < relation.size(); i++) {
+		if (!catalog_manager.haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
 		index.push_back(temp);	//存入属性的序号
 	}
-	Attribute attribute = catalog_manager->getAttribute(table_name);	//获取表的所有属性信息
-	delete(catalog_manager);
 	// 检查Attribute的类型与输入的relation是否匹配
 	for (size_t i = 0; i < relation.size(); i++) {
-		if (attribute.type[index[i]] != relation[i].attributeType) throw key_type_conflict();
+		if (attribute.type[index[i]] != relation[i].key.type) throw key_type_conflict();
 	}
-	// 获取总block数量（这里不用担心储存record的db文件被删除，因为getBlockNum()会返回0）
-	BufferManager* buffer_manager = new BufferManager(table_name, 1);
-	int block_number = buffer_manager->getBlockNum();
-	delete(buffer_manager);
+	// 建立表对象
+	Table table(table_name, attribute);
+	// 获取总block数量
+	int block_number = getBlockNumber(table_name);
 	// 从第一个block开始，装入Tuple
-	std::vector<Tuple> tuple;
+	std::vector<Tuple>& tuple = table.getTuple();
+	std::string filepath = RECORD_PATH + table_name + ".db";
 	for (int i = 0; i < block_number; i++) {
-		std::string s = loadBlockString(i, table_name);	//装入block
-		std::vector<Tuple> temp = decodeTupleString(s);	//decode blockString为vector<Tuple>
-		for (size_t j = 0; j < temp.size(); j++) {
-			//判断每个读入的tuple，是否满足relation
-			bool meetRelation = true;	//满足条件设为true，不满足设为false
-			std::vector<key_> keys = temp[j].getTuple();	//获取这条record的所有key
+		// 获得页指针
+		char* page_pointer  = buffer_manager.getPage(filepath ,i);
+		int offset = 3 * sizeof(int);
+		// 获得tuple个数
+		int tuple_num = getTupleNum(page_pointer);
+		for (int i = 0; i < tuple_num; i++) {
+			Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
+			std::vector<key_> keys = temp.getKeys();
+			bool isRelation = true;
 			for (size_t m = 0; m < relation.size(); m++) {
-				meetRelation = this->meetRelation(keys[index[m]], relation[m]);
-				if (meetRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+				isRelation = meetRelation(keys[index[m]], relation[m]);
+				if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
 			}
-			if (meetRelation) tuple.push_back(temp[i]);	//满足所有条件，则存入这个记录
-			keys.clear();	//清空keys，用于下次使用
+			// 逐个写入table
+			if (isRelation) tuple.push_back(temp);
 		}
-		temp.clear();
+	}
+	return table;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+std::string RecordManager::encodeTuple(Tuple tuple) {
+	std::stringstream s;
+	int n = tuple.size();	//4bytes的Tuple size:n
+	std::vector<key_> keys = tuple.getKeys();
+	s.write((char*)&n, sizeof(int));
+	for (int i = 0; i < n; i++) {
+		s.write((char*)&keys[i].type, sizeof(int));		//写入key_tupe
+		s.write((char*)&(keys[i].INT_VALUE), sizeof(int));	//写入INT
+		s.write((char*)&(keys[i].FLOAT_VALUE), sizeof(float));	//写入FLOAT
+		int string_len = keys[i].STRING_VALUE.size();
+		s.write((char*)&string_len, sizeof(int));	//写入4 bytes sizeof(STRING_VALUE)
+		s.write(keys[i].STRING_VALUE.c_str(), string_len);	//写入STRING_VALUE
+	}
+	return s.str();
+}
+
+Tuple RecordManager::decodeSingleTuple(char* pointer, int& offset) {
+	Tuple tuple;
+	int n;
+	memcpy_s(&n, sizeof(int), pointer + offset, sizeof(int));	//读取4bytes的Tuple size:n
+	offset += sizeof(int);
+	for (int i = 0; i < n; i++) {
+		key_ key;
+		memcpy_s(&(key.type), sizeof(int), pointer + offset, sizeof(int)); //读取key_tupe
+		offset += sizeof(int);
+		memcpy_s(&(key.INT_VALUE), sizeof(int), pointer + offset, sizeof(int)); //读取INT
+		offset += sizeof(int);
+		memcpy_s(&(key.FLOAT_VALUE), sizeof(float), pointer + offset, sizeof(float)); //读取float
+		offset += sizeof(float);
+		int string_len;
+		memcpy_s(&string_len, sizeof(int), pointer + offset, sizeof(int));
+		offset += sizeof(int);
+		char* value = (char*)malloc(string_len + 1);
+		memcpy_s(value, string_len, pointer + offset, string_len);
+		value[string_len] = '\0';
+		offset += string_len;
+		key.STRING_VALUE = value;
+		tuple.addKey(key);
 	}
 	return tuple;
+}
+
+std::vector<Tuple> RecordManager::decodeAllTuple(char* pointer) {
+	std::vector<Tuple> allTuples;
+	int offset = 3 * sizeof(int);
+	int tuple_num = getTupleNum(pointer);
+	for (int i = 0; i < tuple_num; i++) {
+		allTuples.push_back(decodeSingleTuple(pointer, offset));
+	}
+	return allTuples;
+}
+
+int RecordManager::getBlockNumber(std::string table_name) {
+	std::string filepath = RECORD_PATH + table_name + ".db";
+	int block_id = 0;
+	char* first_page = buffer_manager.getPage(filepath, 0);
+	memcpy_s(&block_id, sizeof(int), first_page + sizeof(int), sizeof(int));
+    return block_id;
+}
+
+void RecordManager::setBlockNumber(int block_number, std::string table_name)
+{
+	std::string filepath = RECORD_PATH + table_name + ".db";
+	char* first_page = buffer_manager.getPage(filepath, 0);
+	memcpy_s(first_page + sizeof(int), sizeof(int),&block_number , sizeof(int));
 }
 
 std::string RecordManager::createFormatedBlockString()
 {
 	std::stringstream s;
-	int size = 8;	//一块block的前4个bytes存block总占用空间
+	char init[sizeof(int) + 1] = "####";
+	int size = 12;	//一块block的前4个bytes存block总占用空间
 	int TupleNumber = 0;	//后4个bytes存block有多少个Tuple，随后Tuple按顺序密集存放
+	s.write(init, sizeof(int));
 	s.write((char*)&size, sizeof(int));
 	s.write((char*)&TupleNumber, sizeof(int));
 	return s.str();
 }
 
-int RecordManager::getBlockStringSize(std::string s)
+int RecordManager::getBlockStringSize(char* pointer)
 {
 	int size = 0;
-	char* pointer = (char*)&size;
-	for (int i = 0; i < sizeof(int); i++) {
-		pointer[i] = s[i];
-	}
+	pointer += sizeof(int);
+	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
 	return size;
 }
 
-void RecordManager::setBlockStringSize(int size, std::string& s)
+void RecordManager::setBlockStringSize(int size, char* pointer)
 {
-	char* pointer = (char*) &size;
-	for (int i = 0; i < sizeof(int); i++) {
-		s[i] = pointer[i];
-	}
+	pointer += sizeof(int);
+	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
 }
 
-int RecordManager::getTupleNum(std::string s)
+int RecordManager::getTupleNum(char* pointer)
 {
 	int size = 0;
-	char* pointer = (char*)&size;
-	for (int i = 0; i < sizeof(int); i++) {
-		pointer[i] = s[i + sizeof(int)];
-	}
+	pointer += sizeof(int) * 2;
+	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
 	return size;
 }
 
-void RecordManager::setTupleStringSize(int size, std::string& s)
+void RecordManager::setTupleStringSize(int size, char* pointer)
 {
-	char* pointer = (char*)&size;
-	for (int i = sizeof(int); i < 2 * sizeof(int); i++) {
-		s[i] = pointer[i - sizeof(int)];
-	}
+	pointer += sizeof(int) * 2;
+	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
 }
 
-void RecordManager::flushToBlock(std::string s, int block_id, std::string table_name)
+void RecordManager::writeTupleString(char* pointer, std::string encoded_tuple)
 {
-	std::string filepath = RECORD_PATH + table_name + ".db";
-	BufferManager buffer(filepath, 1);	//因为只需要刷一个block，因此需要1个page
-	int page_id = buffer.loadBlock(block_id);	//装入block
-	char* pointer = buffer.getPagePointer(page_id);	//得到page pointer
-	//写入page
-	for (int i = 0; i < s.size(); i++)
-		pointer[i] = s[i];
-	buffer.setDirty(page_id, true);	//设置脏页
-}
-
-std::string RecordManager::loadBlockString(int block_id, std::string table_name)
-{
-	std::string filename = RECORD_PATH + table_name + ".db";
-	BufferManager buffer(filename, 1);	//因为只需要装一个block，因此需要1个page
-	int page_id = buffer.loadBlock(block_id);	//装入block
-	char* pointer = buffer.getPagePointer(page_id);	//得到page pointer
-	std::string block;
-	block.reserve(PAGESIZE);
-	for (int i = 0; i < PAGESIZE; i++)
-		block = block + pointer[i];
-	return block;
-}
-
-void RecordManager::writeTupleString(std::string& s, Tuple& tuple)
-{
-	std::string encoded_tuple = tuple.encodeTuple();
-	int old_size = getBlockStringSize(s);
-	s = s.substr(0, old_size);
-	for (size_t i = 0; i < encoded_tuple.size(); i++) {
-		s = s + encoded_tuple[i];	//写入新的Tuple
-	}
-	int size = old_size + encoded_tuple.size();
-	int tuple_number = getTupleNum(s) + 1;
-	setBlockStringSize(size, s);
-	setTupleStringSize(tuple_number, s);	//设置BlockSize和Tuple个数
-}
-
-int RecordManager::getTupleSize(Tuple tuple)
-{
-	std::string encoded_tuple = tuple.encodeTuple();
-	return (int)encoded_tuple.size();
-}
-
-std::vector<Tuple> RecordManager::decodeTupleString(const std::string s)
-{
-	std::vector<Tuple> tuples;
-	int tupleNum = getTupleNum(s);
-	std::string s_temp = s.substr(2 * sizeof(int));
-	
-	for (int i = 0; i < tupleNum; i++) {
-		Tuple* t = new(Tuple);
-		(*t).decodeTuple(s_temp);
-		tuples.push_back(*t);
-		delete(t);
-	}
-	return tuples;
+	int old_size = getBlockStringSize(pointer);
+	char* end = pointer + old_size;
+	for (size_t i = 0; i < encoded_tuple.size(); i++) end[i] = encoded_tuple[i];	//写入新的tuple
+	setBlockStringSize(old_size + encoded_tuple.size(), pointer);
+	setTupleStringSize(getTupleNum(pointer) + 1, pointer);	//设置BlockSize和Tuple个数
 }
 
 bool RecordManager::meetRelation(key_ key, Relation relation)
 {
 	bool meetRelation = false;
 	//先判断tuple的类型
-	if (relation.attributeType == INT) {
+	if (relation.key.type == INT) {
 		switch (relation.sign) {
 		case NOT_EQUAL:
 			if (key.INT_VALUE != relation.key.INT_VALUE) meetRelation = true;
@@ -375,7 +414,7 @@ bool RecordManager::meetRelation(key_ key, Relation relation)
 		default: break;
 		}
 	}
-	else if (relation.attributeType == FLOAT) {
+	else if (relation.key.type == FLOAT) {
 		switch (relation.sign) {
 		case NOT_EQUAL:
 			if (key.FLOAT_VALUE != relation.key.FLOAT_VALUE) meetRelation = true;
@@ -398,7 +437,7 @@ bool RecordManager::meetRelation(key_ key, Relation relation)
 		default: break;
 		}
 	}
-	else if (relation.attributeType == STRING) {
+	else {
 		switch (relation.sign) {
 		case NOT_EQUAL:
 			if (key.STRING_VALUE != relation.key.STRING_VALUE) meetRelation = true;
@@ -422,4 +461,26 @@ bool RecordManager::meetRelation(key_ key, Relation relation)
 		}
 	}
 	return meetRelation;
+}
+
+bool RecordManager::haveSameKey(Table& table, int i, key_ key) {
+	// 这里可以用index来判断重复，以提高效率！！！
+	// 以下方法为：加载整张表→从头遍历所有的数据，判断重复
+	// 表中所有的record
+	std::vector<Tuple>& tuple = table.getTuple();
+	for (size_t m = 0; m < tuple.size(); i++) {
+		if (key.type == INT) {
+			if (tuple[m].getKeys()[i].INT_VALUE == key.INT_VALUE)
+				return true;
+		}
+		else if (key.type == FLOAT) {
+			if (tuple[m].getKeys()[i].FLOAT_VALUE == key.FLOAT_VALUE)
+				return true;
+		}
+		else {
+			if (tuple[m].getKeys()[i].STRING_VALUE == key.STRING_VALUE)
+				return true;
+		}
+	}
+	return false;
 }

@@ -9,8 +9,8 @@
      Relation结构体 = 目标Attribute Name + Attribute Type(INT, FLOAT, STRING) + sign + key
      例如 where salary > 3.1 中：
      Attribute Name = "salary"
-     Attribute Type = FLOAT
      sign = GREATER
+     key.type = FLOAT
      key.FLAOT_VALUE = 3.1
 */
 #pragma once
@@ -30,7 +30,6 @@ typedef enum {
 class Relation {
 public:
     std::string attributeName;
-    AttrType attributeType;
     Sign_ sign;
     key_ key;
 };
