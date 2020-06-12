@@ -1,3 +1,4 @@
+#include "iostream"
 
 class Interpreter
 {
@@ -20,11 +21,10 @@ public:
     void decode();
     //get stuff
     void get_query();
-    std::string get_word(int location, int & tail);
-    std::string convert_to_lower(std::string s, int location);
-    std::string get_relation(int location, int & tail);
+    std::string fetch_word(int location, int & tail);
+    std::string get_condition(int location, int & tail);
     int get_type(int location, int & tail);
-    int get_int_bit(int number);
-    int get_float_bit(float number);
+    int get_len(int number);
+    int get_len(float number);
     void norm();
 };
