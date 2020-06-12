@@ -9,9 +9,9 @@ typedef enum{
     //STRING > 0 (string的长度+1)
 }keyType;
 
-//type的类型：-1：int,0:float,1-255:string(数值为字符串的长度+1),注意使用时对Value的选择！
+//type的类型：INT, FLOAT, STRING对应char(n)中的n
 struct key_{
-    keyType type;
+    int type;
     int INT_VALUE;
     float FLOAT_VALUE;
     std::string STRING_VALUE;
