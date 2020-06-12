@@ -88,13 +88,11 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 	if (getBlockStringSize(page_pointer) + encodedTuple.size() < PAGESIZE) {
 		// 空间充足
 		writeTupleString(page_pointer, encodedTuple);
-		setBlockStringSize(getBlockStringSize(page_pointer) + encodedTuple.size(), page_pointer);
-		setTupleStringSize(getTupleNum(page_pointer) + 1, page_pointer);
 		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number - 1));
 	}
 	else {
 		// 空间不足，开新的页
-		setBlockNumber(getBlockNumber(table_name) + 1, table_name);	//块数+1
+		setBlockNumber(block_number + 1, table_name);	//块数+1
 		page_pointer = buffer_manager.getPage(table_path, block_number);
 		// 写入页头
 		std::string empty_block = createFormatedBlockString();
@@ -102,8 +100,6 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 			page_pointer[i] = empty_block[i];
 		// 写入tuple
 		writeTupleString(page_pointer, encodedTuple);
-		setBlockStringSize(getBlockStringSize(page_pointer) + encodedTuple.size(), page_pointer);
-		setTupleStringSize(getTupleNum(page_pointer) + 1, page_pointer);
 		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number));
 	}
 }
@@ -193,10 +189,10 @@ Table RecordManager::loadRecord(std::string table_name)
 	Table table(table_name, attr);
 	// 获取总block数量
 	int block_number = getBlockNumber(table_name);
-	// 从第一个block开始，装入Tuple
+	// 从第二个block开始，装入Tuple
 	std::vector<Tuple>& tuple = table.getTuple();
 	std::string filepath = RECORD_PATH + table_name + ".db";
-	for (int i = 0; i < block_number; i++) {
+	for (int i = 1; i < block_number; i++) {
 		// 获得页指针
 		char* page_pointer  = buffer_manager.getPage(filepath ,i);
 		int offset = 3 * sizeof(int);
@@ -229,10 +225,10 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	Table table(table_name, attribute);
 	// 获取总block数量
 	int block_number = getBlockNumber(table_name);
-	// 从第一个block开始，装入Tuple
+	// 从第二个block开始，装入Tuple
 	std::vector<Tuple>& tuple = table.getTuple();
 	std::string filepath = RECORD_PATH + table_name + ".db";
-	for (int i = 0; i < block_number; i++) {
+	for (int i = 1; i < block_number; i++) {
 		// 获得页指针
 		char* page_pointer  = buffer_manager.getPage(filepath ,i);
 		int offset = 3 * sizeof(int);
@@ -336,6 +332,7 @@ void RecordManager::setBlockNumber(int block_number, std::string table_name)
 	std::string filepath = RECORD_PATH + table_name + ".db";
 	char* first_page = buffer_manager.getPage(filepath, 0);
 	memcpy_s(first_page + sizeof(int), sizeof(int),&block_number , sizeof(int));
+	buffer_manager.setDirty(buffer_manager.getPageId(filepath, 0));
 }
 
 std::string RecordManager::createFormatedBlockString()

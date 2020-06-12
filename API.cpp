@@ -16,11 +16,13 @@ int main() {
 	attribute.num = 3;
 	attribute.name[0] = "bno";		attribute.name[1] = "title";	attribute.name[2] = "price";
 	attribute.type[0] = INT;		attribute.type[1] = 7;		attribute.type[2] = FLOAT;
-	attribute.primary_key = -1;	//没有primary key
-	attribute.unique[0] = false;	attribute.unique[1] = false;	attribute.unique[2] = false;
-	attribute.index[0] = false;		attribute.index[1] = false;		attribute.index[2] = false;
+	attribute.primary_key = 0;	//没有primary key
+	attribute.unique[0] = true;	attribute.unique[1] = false;	attribute.unique[2] = false;
+	attribute.index[0] = true;		attribute.index[1] = false;		attribute.index[2] = false;
 	Index index;
-	index.indexNumber = 0;
+	index.indexNumber = 1;
+	index.location[0] = 0;
+	index.indexname[0] = "bno_index";
 
 	//设置一条tuple
 	key_ key;
@@ -28,7 +30,12 @@ int main() {
 	key.STRING_VALUE = "Github";
 	key.FLOAT_VALUE = 3.1;
 	Tuple tuple;
-	tuple.addKey(key);	tuple.addKey(key);	tuple.addKey(key);
+	key.type = INT;
+	tuple.addKey(key);
+	key.type = (keyType)7;
+	tuple.addKey(key);	
+	key.type = FLOAT;
+	tuple.addKey(key);
 
 	//设置空relation
 	std::vector<Relation> relation;
@@ -39,12 +46,19 @@ int main() {
 	//api.dropTable(table_name);
 	//api.showAttributeInfo(table_name);
 
-	//for (size_t i = 0; i < 10000; i++) {
-	//	api.insertRecord(table_name, tuple);
+	//for (size_t i = 0; i < 1000; i++) {
+		//api.insertRecord(table_name, tuple);
 	//}
+	//std::cout << "Delete " << api.deleteRecord(table_name, relation) << " records.\n";
+
+	//CatalogManager catalog_manager;
+	//catalog_manager.addIndex(table_name, "bno", "bno_index");
+	//api.showAttributeInfo(table_name);
 
 	//Table table = api.selectRecord(table_name, relation);
 	//table.showTable();
+
+	
 
 	clock_t end_time = clock();
 	std::cout << std::endl;
@@ -56,13 +70,13 @@ int main() {
 
 void API::createTable(std::string table_name, Attribute attribute, Index index)
 {
-	//catalog_manager.createTable(table_name, attribute, attribute.primary_key ,index);
+	catalog_manager.createTable(table_name, attribute,index);
 	record_manager.createTableFile(table_name);
 }
 
 void API::dropTable(std::string table_name)
 {
-	//catalog_manager.dropTable(table_name);
+	catalog_manager.dropTable(table_name);
 	record_manager.dropTableFile(table_name);
 }
 
@@ -74,6 +88,7 @@ Table API::selectRecord(std::string table_name, std::vector<Relation> relation)
 
 int API::deleteRecord(std::string table_name, std::vector<Relation> relation)
 {
+	if (relation.size() == 0) return record_manager.deleteRecord(table_name);
 	return record_manager.deleteRecord(table_name, relation);
 }
 

@@ -6,17 +6,17 @@
 struct Attribute{
     int num;  //存放table的属性数
     std::string name[32];  //存放每个属性的名字
-    short primary_key;  //判断是否存在主键,-1为不存在，其他则为主键的所在位置
-    short type[32];  //存放每个属性的类型，-1：int,0:float,1~255:string的长度+1
+    int primary_key;  //判断是否存在主键,-1为不存在，其他则为主键的所在位置
+    int type[32];  //存放每个属性的类型，-1：int,0:float,1~255:string的长度+1
     bool unique[32];  //判断每个属性是否unique，是为true
     bool index[32]; //判断是否存在索引
 };
 
-//索引管理，一张表最多只能有10个index
+//索引管理，一张表最多只能有32个index
 struct Index{
     int indexNumber;  //index的总数
-    short location[10];  //每个index在Attribute的name数组中是第几个
-    std::string indexname[10];  //每个index的名字
+    int location[32];  //每个index在Attribute的name数组中是第几个
+    std::string indexname[32];  //每个index的名字
 };
 
 class Table{
