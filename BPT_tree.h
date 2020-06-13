@@ -1,8 +1,14 @@
+#ifndef BPT_NODE_H
+#define BPT_NODE_H
+#endif
+
 #include <iostream>
 #include <vector>
 #include "BPT_node.h"
 #include "BufferManager.h"
 #include "const.h"
+
+extern BufferManager buffer_manager;
 
 template <typename T>
 

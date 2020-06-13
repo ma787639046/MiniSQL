@@ -3,11 +3,12 @@
 #include <sstream>
 #include <map>
 #include <string>
-#include "BPT_node.h"
 #include "BPT_tree.h"
 #include "BufferManager.h"
 #include "const.h"
+#include "API.h"
 
+extern BufferManager buffer_manager;
 
 template <class T>
 BPlusTree<T>::BPlusTree(std::string f_name, int key_size, int tree_degree):FileName(f_name),key_num(0),level(0),node_num(0),root(NULL),leafHead(NULL),key_size(key_size),degree(tree_degree)
@@ -566,12 +567,10 @@ template <class T>
 int BPlusTree<T>::getBlockNum(std::string table_name)
 {
     char* p;
-    BufferManager b_m(table_name,256);
     int block_num = -1;
     do
     {
-        int page_id = b_m.loadBlock(block_num + 1);
-        p = b_m.getPagePointer(page_id);
+        p = buffer_manager.getPage(table_name, block_num+1);
         block_num++;
     } while(p[0] != '\0');
     return block_num;
@@ -626,11 +625,9 @@ void BPlusTree<T>::readFromDiskAll()
         block_num = 1;
     }
     //get page pointer from buffer manager
-    BufferManager b_m(fname,256);
     for(int i=0;i<block_num;i++)
     {
-        int page_id = b_m.loadBlock(i);
-        char *p = b_m.getPagePointer(page_id);
+        char *p = buffer_manager.getPage(fname, i);
         //read: insert the key and the element into the tree
         readFromDisk(p, p+PAGESIZE);
     }
@@ -642,12 +639,10 @@ void BPlusTree<T>::WBToDiskAll()
     getFile(fname);
     int block_num = getBlockNum(fname);
     Tree ntmp = leafHead;
-    BufferManager b_m(fname,256);
     int i, j;
     for (j = 0, i = 0; ntmp != NULL; j++)
     {
-        int page_id = b_m.loadBlock(j);
-        char *p = b_m.getPagePointer(page_id);
+        char *p = buffer_manager.getPage(fname, j);
         int offset = 0;
         memset(p, 0, PAGESIZE);
         for (i = 0; i < ntmp->num; i++)
@@ -661,15 +656,16 @@ void BPlusTree<T>::WBToDiskAll()
         }
         p[offset] = '\0';
         //make this page dirty
-        b_m.setDirty(page_id,true);
+        int page_id = buffer_manager.getPageId(fname, j);
+        buffer_manager.setDirty(page_id);
         ntmp = ntmp->next;
     }
     while (j < block_num)
     {
-        int page_id = b_m.loadBlock(j);
-        char *p = b_m.getPagePointer(page_id);
+        char *p = buffer_manager.getPage(fname, j);
+        int page_id = buffer_manager.getPageId(fname, j);
         memset(p, 0, PAGESIZE);
-        b_m.setDirty(page_id,true);
+        buffer_manager.setDirty(page_id);
         j++;
     }
     return;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "BPT_node.h"
+extern BufferManager buffer_manager;
 
 // construction function
 template <class T>

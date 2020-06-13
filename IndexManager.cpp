@@ -1,3 +1,11 @@
+#ifndef BPT_NODE_H
+#define BPT_NODE_H
+#endif
+
+#ifndef BPT_TREE_H
+#define BPT_TREE_H
+#endif
+
 #include "IndexManager.h"
 #include "CatalogManager.h"
 #include "Table.h"
@@ -10,13 +18,13 @@ IndexManager::IndexManager(std::string table_name, int * string_sizes)
 {
     CatalogManager catalog;
     Attribute table_attr = catalog.getAttribute(table_name);
-    for(int i=0;i<table_attr.attributeNumber;i++)
+    for(int i=0;i<table_attr.num;i++)
     {
         if(table_attr.index[i]!=0)//it needs index
         {
-            if(table_attr.type[i]==STRING)
+            if(table_attr.type[i] > 0)//STRING
             {
-                int string_size = string_sizes[i];
+                int string_size = table_attr.type[i];
                 generate_index("INDEX_FILE_" + table_attr.name[i] + "_" + table_name, table_attr.type[i], string_size);
             }
             else
@@ -71,7 +79,7 @@ int IndexManager::get_degree(int type, int string_size)
     {
         degree = (PAGESIZE-sizeof(int)) / (sizeof(float)+sizeof(int));
     }
-    else if(type==STRING)
+    else if(type > 0)//string
     {
         degree = (PAGESIZE-sizeof(int)) / (string_size+sizeof(int));
     }
@@ -98,7 +106,7 @@ void IndexManager::generate_index(std::string file_name, int type, int string_si
         BPlusTree<float>* Tree = new BPlusTree<float>(file_name, size_of_key, degree);
         index_float_map.insert(std::map<std::string,BPlusTree<float>*>::value_type(file_name, Tree));
     }
-    else if(type==STRING)
+    else if(type > 0)//string
     {
         size_of_key = string_size;
         BPlusTree<std::string>* Tree = new BPlusTree<std::string>(file_name, size_of_key, degree);
@@ -270,11 +278,12 @@ void IndexManager::delete_index(std::string file_name, key_ data, int type)//del
         }
     }
 }
-void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std::vector<int>& elem, int type1, int type2);//find key range, return their elements
+
+void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std::vector<int>& elem, int type1, int type2)//find key range, return their elements
 {
     if(type1 != type2)
     {
-        cout<<"2 data-types are not comparable!\n";
+        std::cout<<"2 data-types are not comparable!\n";
         return;
     }
     //search_type = 1: find < key2
@@ -282,11 +291,11 @@ void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std
     //search_type = exception: key1 < x < key2
     int search_type;
     
-    if(type1!=INT && type1!=FLOAT && type1!=STRING)
+    if(type1!=INT && type1!=FLOAT && type1<=0)//not int, not float, not string
     {
         search_type = 1;
     }
-    else if(type2!=INT && type2!=FLOAT && type2!=STRING)
+    else if(type2!=INT && type2!=FLOAT && type2<=0)//not int, not float, not string
     {
         search_type = 2;
     }
@@ -332,3 +341,10 @@ void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std
         }
     }
 }
+
+int main()
+{
+    IndexManager index_manager;
+    std::cout<<"This is index manager.cpp\n";
+}
+

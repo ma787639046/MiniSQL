@@ -1,7 +1,10 @@
 #include <iostream>
 #include <vector>
-template <typename T>
+#include "BufferManager.h"
 
+extern BufferManager buffer_manager;
+
+template <typename T>
 class TreeNode
 {
 public:

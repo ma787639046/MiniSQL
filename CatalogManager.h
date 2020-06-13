@@ -16,6 +16,10 @@
 #include "BufferManager.h"
 #include "const.h"
 #include "exceptions.h"
+//for xcode
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 extern BufferManager buffer_manager;
 
