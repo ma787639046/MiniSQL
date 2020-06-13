@@ -1,6 +1,4 @@
-#ifndef BPT_NODE_H
-#define BPT_NODE_H
-#endif
+#pragma once
 
 #include <iostream>
 #include <vector>

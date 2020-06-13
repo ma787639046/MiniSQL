@@ -344,7 +344,7 @@ void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std
 
 int main()
 {
-    IndexManager index_manager;
+//    IndexManager index_manager;
     std::cout<<"This is index manager.cpp\n";
 }
 

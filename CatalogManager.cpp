@@ -380,34 +380,34 @@ int CatalogManager::getBlockNumber()
 {
 	int block_id = 0;
 	char* first_page = buffer_manager.getPage(CATALOG_FILEPATH, 0);
-	memcpy_s(&block_id, sizeof(int), first_page + sizeof(int), sizeof(int));
+	memcpy(&block_id,  first_page + sizeof(int), sizeof(int));
 	return block_id;
 }
 
 void CatalogManager::setBlockNumber(int block_number)
 {
 	char* first_page = buffer_manager.getPage(CATALOG_FILEPATH, 0);
-	memcpy_s(first_page + sizeof(int), sizeof(int), &block_number, sizeof(int));
+	memcpy(first_page + sizeof(int), &block_number, sizeof(int));
 	buffer_manager.setDirty(buffer_manager.getPageId(CATALOG_FILEPATH, 0));
 }
 
 void CatalogManager::setBlockStringSize(int size, char* pointer)
 {
 	pointer += sizeof(int);
-	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
+	memcpy(pointer, &size, sizeof(int));
 }
 
 void CatalogManager::setTableStringSize(int size, char* pointer)
 {
 	pointer += sizeof(int) * 2;
-	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
+	memcpy(pointer,  &size, sizeof(int));
 }
 
 int CatalogManager::getBlockStringSize(char* pointer)
 {
 	int size = 0;
 	pointer += sizeof(int);
-	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
+	memcpy(&size, pointer, sizeof(int));
 	return size;
 }
 
@@ -415,7 +415,7 @@ int CatalogManager::getTableNum(char* pointer)
 {
 	int size = 0;
 	pointer += sizeof(int) * 2;
-	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
+	memcpy(&size,  pointer, sizeof(int));
 	return size;
 }
 
@@ -471,48 +471,48 @@ Catalog CatalogManager::decodeSingleCatalog(char* page_pointer, int& offset)
 	Catalog catalog;
 	// 读取tablename
 	int table_name_size;
-	memcpy_s(&table_name_size, sizeof(int), page_pointer + offset, sizeof(int));
+	memcpy(&table_name_size,  page_pointer + offset, sizeof(int));
 	offset += sizeof(int);
 	for (int i = 0; i < table_name_size; i++) {
 		catalog.TableName += page_pointer[offset];
 		offset++;
 	}
 	// 读取属性数量
-	memcpy_s(&(catalog.attribute.num), sizeof(int), page_pointer + offset, sizeof(int));
+	memcpy(&(catalog.attribute.num), page_pointer + offset, sizeof(int));
 	offset += sizeof(int);
 	// 读取属性的primary_key
-	memcpy_s(&(catalog.attribute.primary_key), sizeof(int), page_pointer + offset, sizeof(int));
+	memcpy(&(catalog.attribute.primary_key),  page_pointer + offset, sizeof(int));
 	offset += sizeof(int);
 	for (int i = 0; i < catalog.attribute.num; i++) {
 		// 读取属性名的大小和属性名
 		int attrNameSize;
-		memcpy_s(&attrNameSize, sizeof(int), page_pointer + offset, sizeof(int));
+		memcpy(&attrNameSize,  page_pointer + offset, sizeof(int));
 		offset += sizeof(int);
 		for (int j = 0; j < attrNameSize; j++) {
 			catalog.attribute.name[i] += page_pointer[offset];
 			offset++;
 		}
 		// 读取属性type
-		memcpy_s(&(catalog.attribute.type[i]), sizeof(int), page_pointer + offset, sizeof(int));
+		memcpy(&(catalog.attribute.type[i]), page_pointer + offset, sizeof(int));
 		offset += sizeof(int);
 		// 读取unique
-		memcpy_s(&(catalog.attribute.unique[i]), sizeof(bool), page_pointer + offset, sizeof(bool));
+		memcpy(&(catalog.attribute.unique[i]), page_pointer + offset, sizeof(bool));
 		offset += sizeof(bool);
 		// 读取index
-		memcpy_s(&(catalog.attribute.index[i]), sizeof(bool), page_pointer + offset, sizeof(bool));
+		memcpy(&(catalog.attribute.index[i]), page_pointer + offset, sizeof(bool));
 		offset += sizeof(bool);
 	}
 	// 读取index数量
-	memcpy_s(&(catalog.index.indexNumber), sizeof(int), page_pointer + offset, sizeof(int));
+	memcpy(&(catalog.index.indexNumber), page_pointer + offset, sizeof(int));
 	offset += sizeof(int);
 	// 读取index信息
 	for (int i = 0; i < catalog.index.indexNumber; i++) {
 		// 读取location
-		memcpy_s(&(catalog.index.location[i]), sizeof(int), page_pointer + offset, sizeof(int));
+		memcpy(&(catalog.index.location[i]),  page_pointer + offset, sizeof(int));
 		offset += sizeof(int);
 		// 读取indexname
 		int indexNameLen;
-		memcpy_s(&indexNameLen, sizeof(int), page_pointer + offset, sizeof(int));
+		memcpy(&indexNameLen,  page_pointer + offset, sizeof(int));
 		offset += sizeof(int);
 		for (int j = 0; j < indexNameLen; j++) {
 			catalog.index.indexname[i] += page_pointer[offset];

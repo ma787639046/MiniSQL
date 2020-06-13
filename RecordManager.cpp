@@ -292,21 +292,21 @@ std::string RecordManager::encodeTuple(Tuple tuple) {
 Tuple RecordManager::decodeSingleTuple(char* pointer, int& offset) {
 	Tuple tuple;
 	int n;
-	memcpy_s(&n, sizeof(int), pointer + offset, sizeof(int));	//读取4bytes的Tuple size:n
+	memcpy(&n,  pointer + offset, sizeof(int));	//读取4bytes的Tuple size:n
 	offset += sizeof(int);
 	for (int i = 0; i < n; i++) {
 		key_ key;
-		memcpy_s(&(key.type), sizeof(int), pointer + offset, sizeof(int)); //读取key_tupe
+		memcpy(&(key.type),  pointer + offset, sizeof(int)); //读取key_tupe
 		offset += sizeof(int);
-		memcpy_s(&(key.INT_VALUE), sizeof(int), pointer + offset, sizeof(int)); //读取INT
+		memcpy(&(key.INT_VALUE),pointer + offset, sizeof(int)); //读取INT
 		offset += sizeof(int);
-		memcpy_s(&(key.FLOAT_VALUE), sizeof(float), pointer + offset, sizeof(float)); //读取float
+		memcpy(&(key.FLOAT_VALUE),  pointer + offset, sizeof(float)); //读取float
 		offset += sizeof(float);
 		int string_len;
-		memcpy_s(&string_len, sizeof(int), pointer + offset, sizeof(int));
+		memcpy(&string_len,  pointer + offset, sizeof(int));
 		offset += sizeof(int);
 		char* value = (char*)malloc(string_len + 1);
-		memcpy_s(value, string_len, pointer + offset, string_len);
+		memcpy(value,  pointer + offset, string_len);
 		value[string_len] = '\0';
 		offset += string_len;
 		key.STRING_VALUE = value;
@@ -329,7 +329,7 @@ int RecordManager::getBlockNumber(std::string table_name) {
 	std::string filepath = RECORD_PATH + table_name + ".db";
 	int block_id = 0;
 	char* first_page = buffer_manager.getPage(filepath, 0);
-	memcpy_s(&block_id, sizeof(int), first_page + sizeof(int), sizeof(int));
+	memcpy(&block_id, first_page + sizeof(int), sizeof(int));
     return block_id;
 }
 
@@ -337,7 +337,7 @@ void RecordManager::setBlockNumber(int block_number, std::string table_name)
 {
 	std::string filepath = RECORD_PATH + table_name + ".db";
 	char* first_page = buffer_manager.getPage(filepath, 0);
-	memcpy_s(first_page + sizeof(int), sizeof(int),&block_number , sizeof(int));
+	memcpy(first_page + sizeof(int), &block_number , sizeof(int));
 	buffer_manager.setDirty(buffer_manager.getPageId(filepath, 0));
 }
 
@@ -357,28 +357,28 @@ int RecordManager::getBlockStringSize(char* pointer)
 {
 	int size = 0;
 	pointer += sizeof(int);
-	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
+	memcpy(&size, pointer, sizeof(int));
 	return size;
 }
 
 void RecordManager::setBlockStringSize(int size, char* pointer)
 {
 	pointer += sizeof(int);
-	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
+	memcpy(pointer,  &size, sizeof(int));
 }
 
 int RecordManager::getTupleNum(char* pointer)
 {
 	int size = 0;
 	pointer += sizeof(int) * 2;
-	memcpy_s(&size, sizeof(int), pointer, sizeof(int));
+	memcpy(&size,pointer, sizeof(int));
 	return size;
 }
 
 void RecordManager::setTupleStringSize(int size, char* pointer)
 {
 	pointer += sizeof(int) * 2;
-	memcpy_s(pointer, sizeof(int), &size, sizeof(int));
+	memcpy(pointer, &size, sizeof(int));
 }
 
 void RecordManager::writeTupleString(char* pointer, std::string encoded_tuple)
