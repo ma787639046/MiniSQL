@@ -6,9 +6,8 @@
 #include "BPT_tree.h"
 #include "BufferManager.h"
 #include "const.h"
-#include "API.h"
+//#include "API.h"
 
-extern BufferManager buffer_manager;
 
 template <class T>
 BPlusTree<T>::BPlusTree(std::string f_name, int key_size, int tree_degree):FileName(f_name),key_num(0),level(0),node_num(0),root(NULL),leafHead(NULL),key_size(key_size),degree(tree_degree)

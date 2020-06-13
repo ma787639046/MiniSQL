@@ -2,7 +2,9 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include "BPT_node.h"
+#include "BPT_node.cpp"
 #include "BufferManager.h"
 #include "const.h"
 

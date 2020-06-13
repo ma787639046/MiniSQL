@@ -42,7 +42,7 @@ int main() {
 	
 	//开始测试
 	API api;
-	//api.createTable(table_name, attribute, index);
+	api.createTable(table_name, attribute, index);
 	//api.dropTable(table_name);
 	//api.showAttributeInfo(table_name);
 

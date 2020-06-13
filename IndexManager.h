@@ -1,4 +1,5 @@
 #include "BPT_tree.h"
+#include "BPT_tree.cpp"
 #include "Table.h"
 #include <iostream>
 #include <map>
@@ -14,7 +15,7 @@ class IndexManager
     map_string index_string_map;
 public:
     //########################### Need string sizes!!!! ###########################
-    IndexManager(std::string table_name, int * string_sizes);
+    IndexManager(std::string table_name);
     ~IndexManager();
     int get_degree(int type, int string_size);//get the degree of BPT
     void generate_index(std::string file_name, int type, int string_size);//generate index, BPT, and files.

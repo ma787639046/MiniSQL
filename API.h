@@ -13,6 +13,7 @@
 #include "Table.h"
 #include "RecordManager.h"
 #include "CatalogManager.h"
+#include "IndexManager.h"
 
 BufferManager buffer_manager;
 

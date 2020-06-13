@@ -14,7 +14,7 @@
 
 
 
-IndexManager::IndexManager(std::string table_name, int * string_sizes)
+IndexManager::IndexManager(std::string table_name)
 {
     CatalogManager catalog;
     Attribute table_attr = catalog.getAttribute(table_name);
@@ -342,9 +342,9 @@ void IndexManager::find_range(std::string file_name, key_ data1, key_ data2, std
     }
 }
 
-int main()
-{
-//    IndexManager index_manager;
-    std::cout<<"This is index manager.cpp\n";
-}
+//int main()
+//{
+////    IndexManager index_manager;
+//    std::cout<<"This is index manager.cpp\n";
+//}
 

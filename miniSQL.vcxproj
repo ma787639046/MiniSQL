@@ -99,8 +99,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="API.cpp" />
+    <ClCompile Include="BPT_node.cpp" />
+    <ClCompile Include="BPT_tree.cpp" />
     <ClCompile Include="BufferManager.cpp" />
     <ClCompile Include="CatalogManager.cpp" />
+    <ClCompile Include="IndexManager.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="RecordManager.cpp" />
     <ClCompile Include="Table.cpp" />
@@ -108,13 +111,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="API.h" />
+    <ClInclude Include="BPT_node.h" />
+    <ClInclude Include="BPT_tree.h" />
     <ClInclude Include="BufferManager.h" />
     <ClInclude Include="CatalogManager.h" />
     <ClInclude Include="const.h" />
     <ClInclude Include="exceptions.h" />
+    <ClInclude Include="IndexManager.h" />
     <ClInclude Include="page.h" />
     <ClInclude Include="RecordManager.h" />
     <ClInclude Include="Relation.h" />
+    <ClInclude Include="StringFunc.h" />
     <ClInclude Include="Table.h" />
     <ClInclude Include="Tuple.h" />
   </ItemGroup>
