@@ -40,6 +40,7 @@ int main() {
 	//开始测试
 	API api;
 	api.createTable(table_name, attribute, index);
+	api.generate_index(table_name, attribute.name[0], "index0", attribute.type);
 	//api.dropTable(table_name);
 	//api.showAttributeInfo(table_name);
 
