@@ -19,6 +19,12 @@
 #include "IndexManager.h"
 #include "Table.h"
 #include "Relation.h"
+//for xcode
+#include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <string.h>
+#include <stdlib.h>
 //	std::vector<key_> tuple;	//一条tuple，Tuple = (key1, key2, key3 ……) 
 //	std::vector<Tuple> Record;	//表的记录，包含多条Tuple
 

@@ -4,12 +4,6 @@
 //
 
 #include "RecordManager.h"
-//for xcode
-#include <stdio.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdlib.h>
 
 //int main() {
 //	RecordManager m;
@@ -264,12 +258,12 @@ void RecordManager::generate_index(IndexManager& index_manager, std::string tabl
 	table_name += RECORD_PATH;
 	CatalogManager catalog_manager;
 	//check table is exist
-	if (!catalog_manager.havetable(tmp_table_name))
+	if (!catalog_manager.havetable(table_name))
 	{
 		std::cout << "Table not exsits in generating index of record manager\n";
 		throw table_not_exist();
 	}
-	Attribute attr = catalog_manager.getAttribute(tmp_table_name);
+	Attribute attr = catalog_manager.getAttribute(table_name);
 	//find the cur_attr_name
 	int index = -1;
 	for (int i = 0; i < attr.num; i++)
@@ -288,29 +282,20 @@ void RecordManager::generate_index(IndexManager& index_manager, std::string tabl
 	}
 	//get block number
 	int block_num = getBlockNumber(table_name);
-	if (block_num <= 0) block_num = 1;
 	//get file path
 	std::string file_path = "INDEX_FILE" + cur_attr_name + "_" + tmp_table_name;
 	
-	//insert index using index manager for every block
-	for (int i = 0; i < block_num; i++)
-	{
-		char* p = buffer_manager.getPage(table_name, i);
-		char* tmp_p = p;
-		//read every tuple and insert its data into index
-		while (*p != '\0' && p < tmp_p + PAGESIZE)
-		{
-			Tuple tuple = readTuple(p, attr);
-			if (tuple.isAvailable)
-			{
-				std::vector<key_ data = tuple.getKeys();
-				index_manager.insert_index(file_path, data[index], i, data[index].type);
-			}
-			int length = get_tuple_length(p);
-			p += lenth;
+	for (int i = 1; i < block_num; i++) {
+		// 获得页指针
+		char* page_pointer = buffer_manager.getPage(RECORD_PATH + table_name + ".db", i);
+		int offset = 3 * sizeof(int);
+		// 获得tuple个数
+		int tuple_num = getTupleNum(page_pointer);
+		for (int j = 0; j < tuple_num; j++) {
+			std::vector<key_> data = decodeSingleTuple(page_pointer, offset).getKeys();
+			index_manager.insert_index(file_path, data[index], i, data[index].type);
 		}
 	}
-
 }
 
 
