@@ -6,7 +6,7 @@
 #include "BPT_tree.h"
 #include "BufferManager.h"
 #include "const.h"
-//#include "API.h"
+#include "StringFunc.h"
 
 
 template <class T>
@@ -41,7 +41,7 @@ void BPlusTree<T>::drop_tree(Tree node)
         {
             for(int i = 0; i <= node->num; i++)
             {
-                dropTree(node->child[i]);//pass down
+                drop_tree(node->child[i]);//pass down
                 node->child[i] = NULL;
             }
         }
@@ -637,20 +637,23 @@ void BPlusTree<T>::WBToDiskAll()
     std::string fname = INDEX_PATH + FileName;
     getFile(fname);
     int block_num = getBlockNum(fname);
+    //get the leaf
     Tree ntmp = leafHead;
     int i, j;
+    //go over each leaf
     for (j = 0, i = 0; ntmp != NULL; j++)
     {
         char *p = buffer_manager.getPage(fname, j);
         int offset = 0;
         memset(p, 0, PAGESIZE);
+        //for each leaf, write p: p[offset] = ntmp->keys[i] + ntmp->element[i]
         for (i = 0; i < ntmp->num; i++)
         {
             p[offset++] = '#';
             p[offset++] = ' ';
-            copyString(p, offset, ntmp->keys[i]);
+            string_duplicate(p, offset, ntmp->keys[i]);
             p[offset++] = ' ';
-            copyString(p, offset, ntmp->element[i]);
+            string_duplicate(p, offset, ntmp->element[i]);
             p[offset++] = ' ';
         }
         p[offset] = '\0';
@@ -659,6 +662,7 @@ void BPlusTree<T>::WBToDiskAll()
         buffer_manager.setDirty(page_id);
         ntmp = ntmp->next;
     }
+    //if j still not full, set them empty, and make the rest blocks dirty
     while (j < block_num)
     {
         char *p = buffer_manager.getPage(fname, j);

@@ -1,5 +1,6 @@
-// StringFunc.h : This file contains some functions used to operagte type std::String
+// StringFunc.h : This file contains some functions used to operate type std::String
 //
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -40,18 +41,15 @@ void trim(std::string& s, std::string spliter)
 }
 
 
-//std::string convert_to_lower(std::string s, int location)
-//{
-//    for(int i = location;;i++)
-//    {
-//        if(s[i]==' '||s[i]=='\0')
-//        {
-//            break;
-//        }
-//        if(s[i]>='A' && s[i]<='Z')
-//        {
-//            s[i] += 32;
-//        }
-//    }
-//    return s;
-//}
+//for each char in data, p[offset+i] <- data[i]
+template <typename T>
+void string_duplicate(char *p, int &offset, T data)
+{
+    std::stringstream stream;
+    stream << data;
+    std::string s1 = stream.str();
+    for(int i=0;i<s1.length();i++,offset++)
+    {
+        p[offset] = s1[i];
+    }
+}

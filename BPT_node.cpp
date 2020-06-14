@@ -50,7 +50,7 @@ unsigned int TreeNode<T>::Add(T &key)
         //adjust the keys and child nodes
         for(int i=num; i>index; i--)
         {
-            keys[i] = key[i-1];
+            keys[i] = keys[i-1];
         }
         keys[index] = key;
         for(int i=num+1;i>index+1;i--)
@@ -170,7 +170,7 @@ bool TreeNode<T>::Find(T key, unsigned int &index)
         index = 0;
         return false;
     }
-    if(key < key[0])//min
+    if(key < keys[0])//min
     {
         index = 0;
         return false;
