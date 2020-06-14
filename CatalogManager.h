@@ -92,6 +92,9 @@ public:
 	//输入：表名、索引名
 	//异常：1，表不存在，抛出table_not_exist；2，索引不存在，抛出index_not_exist
 	void dropIndex(std::string table_name, std::string index_name);
+
+	std::string IndextoAttr(std::string table_name, std::string index_name);
+
 private:
 	//创建表Record文件
 	void createCatalogFile();	

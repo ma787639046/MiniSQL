@@ -532,3 +532,27 @@ std::vector<Catalog> CatalogManager::decodeAllCatalog(char* pointer)
 	}
 	return allCatalog;
 }
+
+
+
+
+
+std::string CatalogManager::IndextoAttr(std::string table_name, std::string index_name)
+{
+	if (!havetable(table_name))
+		throw table_not_exist();
+	Index index_record = getIndex(table_name);
+	int hasfind = -1;
+	for (int i = 0; i < index_record.indexNumber; i++) {
+		if (index_record.indexname[i] == index_name) {
+			hasfind = i;
+			break;
+		}
+	}
+	if (hasfind == -1)
+		throw index_not_exist();
+	Attribute attr_record = getAttribute(table_name);
+	return attr_record.name[index_record.location[hasfind]];
+
+
+}
