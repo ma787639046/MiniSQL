@@ -7,6 +7,7 @@
 #include "BPT_node.cpp"
 #include "BufferManager.h"
 #include "const.h"
+#include "StringFunc.h"
 
 extern BufferManager buffer_manager;
 

@@ -6,6 +6,15 @@
 #include <string>
 #include <vector>
 
+template <class T>
+T string2num(std::string& s);
+
+void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters);
+
+void trim(std::string& s, std::string spliter);
+
+template <typename T>
+void string_duplicate(char* p, int& offset, T data);
 
 template <class T>
 T string2num(std::string &s)
@@ -19,7 +28,7 @@ T string2num(std::string &s)
 //split()：以delimiters分割字符串，将结果存至tokens
 //输入：待分割的string& s，分割结果vector<string>& tokens，分隔符string& delimiters
 //返回：无
-void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters = " ")
+inline void split(const std::string& s, std::vector<std::string>& tokens, const std::string& delimiters = " ")
 {
     std::string::size_type lastPos = s.find_first_not_of(delimiters, 0);
     std::string::size_type pos = s.find_first_of(delimiters, lastPos);
@@ -33,7 +42,7 @@ void split(const std::string& s, std::vector<std::string>& tokens, const std::st
 //trim()：去除首位两端的特定字符
 //输入：字符串引用，要去除的首位字符spliter
 //返回：无
-void trim(std::string& s, std::string spliter)
+inline void trim(std::string& s, std::string spliter)
 {
     if (s.empty()) return;
     s.erase(0, s.find_first_not_of(spliter));

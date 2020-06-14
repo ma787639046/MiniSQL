@@ -6,7 +6,6 @@
 #include "BPT_tree.h"
 #include "BufferManager.h"
 #include "const.h"
-#include "StringFunc.h"
 
 
 template <class T>
