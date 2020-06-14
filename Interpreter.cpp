@@ -1,8 +1,5 @@
 #include "Interpreter.h"
-#include "API.h"
-#include "Relation.h"
-#include "StringFunc.h"
-#include "exceptions.h"
+
 
 Interpreter::Interpreter(){}
 Interpreter::~Interpreter(){}

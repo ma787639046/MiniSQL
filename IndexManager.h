@@ -1,8 +1,11 @@
+#pragma once
+#include <iostream>
+#include <map>
+#include "CatalogManager.h"
 #include "BPT_tree.h"
 #include "BPT_tree.cpp"
 #include "Table.h"
-#include <iostream>
-#include <map>
+
 
 class IndexManager
 {

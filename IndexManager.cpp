@@ -1,18 +1,4 @@
-#ifndef BPT_NODE_H
-#define BPT_NODE_H
-#endif
-
-#ifndef BPT_TREE_H
-#define BPT_TREE_H
-#endif
-
 #include "IndexManager.h"
-#include "CatalogManager.h"
-#include "Table.h"
-#include "BPT_tree.h"
-#include <map>
-
-
 
 IndexManager::IndexManager(std::string table_name)
 {

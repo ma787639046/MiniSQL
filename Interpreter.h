@@ -1,4 +1,8 @@
 #include "iostream"
+#include "API.h"
+#include "Relation.h"
+#include "StringFunc.h"
+#include "exceptions.h"
 
 class Interpreter
 {

@@ -1,11 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <sstream>
-#include <map>
-#include <string>
 #include "BPT_tree.h"
-#include "BufferManager.h"
-#include "const.h"
 
 
 template <class T>

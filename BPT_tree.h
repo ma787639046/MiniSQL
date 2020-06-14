@@ -3,11 +3,15 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <sstream>
+#include <map>
+#include <string>
 #include "BPT_node.h"
 #include "BPT_node.cpp"
 #include "BufferManager.h"
 #include "const.h"
 #include "StringFunc.h"
+
 
 extern BufferManager buffer_manager;
 
