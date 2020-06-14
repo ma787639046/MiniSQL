@@ -16,6 +16,7 @@
 #include <fstream>
 #include "BufferManager.h"
 #include "CatalogManager.h"
+#include "IndexManager.h"
 #include "Table.h"
 #include "Relation.h"
 //	std::vector<key_> tuple;	//一条tuple，Tuple = (key1, key2, key3 ……) 
@@ -63,6 +64,10 @@ public:
 	//			2、relation中，名为Attribute name的Attribute不存在，则抛出attribute_not_exist
 	//			3、Attribute的类型与输入的relation 不匹配，抛出key_type_conflict
 	Table loadRecord(std::string table_name, std::vector<Relation> relation);	//将table_name中所有满足relation关系的tuples装载至这个vector
+
+	//generate index for record manager
+	void generate_index(IndexManager& index_manager, std::string table_name, std::string cur_attr);
+
 private:
 	//将Tuple转换为string形式，方便储存。
 	//Tuple = 4bytes的Tuple size:n + (4 bytes key_type + 4 bytes INT + 4 bytes FLOAT + 4 bytes sizeof(STRING_VALUE) + STRING_VALUE)*n

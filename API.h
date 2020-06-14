@@ -1,8 +1,3 @@
-//
-//	API.h
-//	Created by MGY on 2020/06/09
-//
-
 /*
 	API：封装底层的3个Manager的各函数，提供接口给顶层Interpreter使用
 		API不产生异常，异常的产生由底层Manager进行；
@@ -10,15 +5,24 @@
 */
 #pragma once
 
+
 #include "Table.h"
 #include "RecordManager.h"
 #include "CatalogManager.h"
 #include "IndexManager.h"
+#include "const.h"
 
 BufferManager buffer_manager;
 
+
 class API {
+private:
+	CatalogManager catalog_manager;
+	RecordManager record_manager;
 public:
+	API();
+	~API();
+	
 	//createTable(): 创建表
 	//输入：表名，
 	//		属性：个数、名称、类型、是否unique、主键（没有主键设为-1，有主键写对应下标。
@@ -62,7 +66,7 @@ public:
 	//输入：表名，tuple
 	void showAttributeInfo(std::string table_name);
 
-private:
-	CatalogManager catalog_manager;
-	RecordManager record_manager;
+	int generate_index(std::string table_name, std::string attribute_name, std::string index_name, int* string_sizes);//generate an index based on the attribute of the table
+	int delete_index(std::string table_name, std::string index_name, int* string_sizes);//delete the index
+
 };

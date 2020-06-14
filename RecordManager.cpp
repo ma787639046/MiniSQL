@@ -257,7 +257,61 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 
 
 
+//generate index for record manager
+void RecordManager::generate_index(IndexManager& index_manager, std::string table_name, std::string cur_attr_name)
+{
+	std::string tmp_table_name = table_name;
+	table_name += RECORD_PATH;
+	CatalogManager catalog_manager;
+	//check table is exist
+	if (!catalog_manager.havetable(tmp_table_name))
+	{
+		std::cout << "Table not exsits in generating index of record manager\n";
+		throw table_not_exist();
+	}
+	Attribute attr = catalog_manager.getAttribute(tmp_table_name);
+	//find the cur_attr_name
+	int index = -1;
+	for (int i = 0; i < attr.num; i++)
+	{
+		if (attr.name[i] == cur_attr_name)
+		{
+			index = i;
+			break;
+		}
+	}
+	//if not found
+	if (index == -1)
+	{
+		std::cout << "cur_attr_name not found in record manager when generating index\n";
+		throw attribute_not_exist();
+	}
+	//get block number
+	int block_num = getBlockNumber(table_name);
+	if (block_num <= 0) block_num = 1;
+	//get file path
+	std::string file_path = "INDEX_FILE" + cur_attr_name + "_" + tmp_table_name;
+	
+	//insert index using index manager for every block
+	for (int i = 0; i < block_num; i++)
+	{
+		char* p = buffer_manager.getPage(table_name, i);
+		char* tmp_p = p;
+		//read every tuple and insert its data into index
+		while (*p != '\0' && p < tmp_p + PAGESIZE)
+		{
+			Tuple tuple = readTuple(p, attr);
+			if (tuple.isAvailable)
+			{
+				std::vector<key_ data = tuple.getKeys();
+				index_manager.insert_index(file_path, data[index], i, data[index].type);
+			}
+			int length = get_tuple_length(p);
+			p += lenth;
+		}
+	}
 
+}
 
 
 
