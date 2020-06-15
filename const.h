@@ -5,6 +5,9 @@
 // 最大页数为100
 #define MAXBUFFERSIZE 100
 
+// INF
+#define INF 10e5
+
 /* catalog文件路径 */
 #define CATALOG_FILEPATH "./data/catalog/catalog.db"
 

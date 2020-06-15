@@ -46,6 +46,7 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 {
 	// 判断对应表名是否存在
 	CatalogManager catalog_manager;
+	IndexManager index_manager(table_name);
 	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
 	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
 	std::vector<key_> keys = tuple.getKeys();
@@ -65,14 +66,26 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 	// 根据haveUnique，决定是否进行unique检查
 	// 预判断的目的是，如果没有unique，则节省了loadRecord(table_name)的消耗
 	if (haveUnique) {
-		Table table = loadRecord(table_name);
 		// 判断unique值是否重复
 		for (size_t i = 0; i < attribute.num; i++) {
 			if (attribute.unique[i] == true) {
-				if (haveSameKey(table, i, keys[i])) {
-					// 发现相同的值，抛出异常
-					if (i == attribute.primary_key) throw primary_key_conflict();
-					else throw unique_conflict();
+				if (attribute.index[i] == true) {
+					// 这里根据索引来查找重复
+					std::string path = "INDEX_FILE_" + attribute.name[i] + "_" + table_name;
+					int findblock = index_manager.find_index(path, keys[i], keys[i].type);
+					if (findblock >= 1) {
+						// 找到相同的值
+						if (i == attribute.primary_key) throw primary_key_conflict();
+						else throw unique_conflict();
+					}
+				}
+				else {
+					Table table = loadRecord(table_name);
+					if (haveSameKey(table, i, keys[i])) {
+						// 发现相同的值，抛出异常
+						if (i == attribute.primary_key) throw primary_key_conflict();
+						else throw unique_conflict();
+					}
 				}
 			}
 		}
@@ -89,6 +102,13 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 		// 空间充足
 		writeTupleString(page_pointer, encodedTuple);
 		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number - 1));
+		for (size_t i = 0; i < attribute.num; i++) {
+			if (attribute.index[i] == true) {
+				// 插入key至对应的b+树
+				std::string path = "INDEX_FILE_" + attribute.name[i] + "_" + table_name;
+				index_manager.insert_index(path, keys[i], block_number - 1, keys[i].type);
+			}
+		}
 	}
 	else {
 		// 空间不足，开新的页
@@ -101,6 +121,13 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 		// 写入tuple
 		writeTupleString(page_pointer, encodedTuple);
 		buffer_manager.setDirty(buffer_manager.getPageId(table_path, block_number));
+		for (size_t i = 0; i < attribute.num; i++) {
+			if (attribute.index[i] == true) {
+				// 插入key至对应的b+树
+				std::string path = "INDEX_FILE_" + attribute.name[i] + "_" + table_name;
+				index_manager.insert_index(path, keys[i], block_number, keys[i].type);
+			}
+		}
 	}
 }
 
@@ -228,28 +255,112 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	// 从第二个block开始，装入Tuple
 	std::vector<Tuple>& tuple = table.getTuple();
 	std::string filepath = RECORD_PATH + table_name + ".db";
-	for (int i = 1; i < block_number; i++) {
-		// 获得页指针
-		char* page_pointer  = buffer_manager.getPage(filepath ,i);
-		int offset = 3 * sizeof(int);
-		// 获得tuple个数
-		int tuple_num = getTupleNum(page_pointer);
-		for (int i = 0; i < tuple_num; i++) {
-			Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
-			std::vector<key_> keys = temp.getKeys();
-			bool isRelation = true;
-			for (size_t m = 0; m < relation.size(); m++) {
-				isRelation = meetRelation(keys[index[m]], relation[m]);
-				if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+	// 判断能否使用带索引的搜索
+	bool search_with_index = false;
+	if (relation.size() == 1) {
+		if (relation[0].sign != NOT_EQUAL && attribute.index[index[0]] == true) {
+			search_with_index = true;
+		} 
+	}
+	else if (relation.size() == 2) {
+		// 两个搜索条件，属性名要一致
+		if (relation[0].attributeName == relation[1].attributeName && attribute.index[index[0]] == true) {
+			if (relation[0].sign != NOT_EQUAL || relation[1].sign != NOT_EQUAL || relation[0].sign != EQUAL || relation[1].sign != EQUAL) {
+				search_with_index = true;
 			}
-			// 逐个写入table
-			if (isRelation) tuple.push_back(temp);
 		}
 	}
-	return table;
+	if (search_with_index) {
+		std::vector<int> block_id_range;
+		searchWithIndex(table_name, block_id_range, relation);
+		for (std::vector<int>::iterator i = block_id_range.begin(); i != block_id_range.end(); i++) {
+			// 获得页指针
+			char* page_pointer = buffer_manager.getPage(filepath, *i);
+			int offset = 3 * sizeof(int);
+			// 获得tuple个数
+			int tuple_num = getTupleNum(page_pointer);
+			for (int j = 0; j < tuple_num; j++) {
+				Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
+				std::vector<key_> keys = temp.getKeys();
+				bool isRelation = true;
+				for (size_t m = 0; m < relation.size(); m++) {
+					isRelation = meetRelation(keys[index[m]], relation[m]);
+					if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+				}
+				// 逐个写入table
+				if (isRelation) tuple.push_back(temp);
+			}
+		}
+		return table;
+	}
+	else {
+		// 从第二块开始遍历每个块
+		for (int i = 1; i < block_number; i++) {
+			// 获得页指针
+			char* page_pointer  = buffer_manager.getPage(filepath ,i);
+			int offset = 3 * sizeof(int);
+			// 获得tuple个数
+			int tuple_num = getTupleNum(page_pointer);
+			for (int j = 0; j < tuple_num; j++) {
+				Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
+				std::vector<key_> keys = temp.getKeys();
+				bool isRelation = true;
+				for (size_t m = 0; m < relation.size(); m++) {
+					isRelation = meetRelation(keys[index[m]], relation[m]);
+					if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+				}
+				// 逐个写入table
+				if (isRelation) tuple.push_back(temp);
+			}
+		}
+		return table;
+	}
+
+	
 }
 
 
+
+void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& elem, std::vector<Relation> relation)
+{
+	IndexManager index_manager(table_name);
+	if (relation.size() == 2) {
+		if (relation[0].sign == LESS || relation[0].sign == LESS_OR_EQUAL) {
+			if (relation[1].sign == GREATER || relation[1].sign == GREATER_OR_EQUAL) {
+				std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
+				index_manager.find_range(path, relation[1].key, relation[0].key, elem, relation[1].key.type, relation[0].key.type);
+				return;
+			}
+		}
+		else if (relation[0].sign == GREATER || relation[0].sign == GREATER_OR_EQUAL) {
+			if (relation[1].sign == LESS || relation[1].sign == LESS_OR_EQUAL) {
+				std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
+				index_manager.find_range(path, relation[0].key, relation[1].key, elem, relation[0].key.type, relation[1].key.type);
+				return;
+			}
+		}
+	}
+	else if (relation.size() == 1) {
+		key_ another_key;
+		another_key.INT_VALUE = INF;
+		another_key.FLOAT_VALUE = INF;
+		another_key.STRING_VALUE = "";
+		if (relation[0].sign == LESS || relation[0].sign == LESS_OR_EQUAL) {
+			another_key.INT_VALUE = -another_key.INT_VALUE;
+			another_key.FLOAT_VALUE = -another_key.FLOAT_VALUE;
+			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
+			index_manager.find_range(path, another_key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+		}
+		else if (relation[0].sign == GREATER || relation[0].sign == GREATER_OR_EQUAL) {
+			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
+			index_manager.find_range(path, relation[0].key, another_key , elem, relation[0].key.type, relation[0].key.type);
+		}
+		else if (relation[0].sign == EQUAL) {
+			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
+			index_manager.find_range(path, relation[0].key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+		}
+	}
+}
 
 //generate index for record manager
 void RecordManager::generate_index(IndexManager& index_manager, std::string table_name, std::string cur_attr_name)
@@ -498,7 +609,6 @@ bool RecordManager::meetRelation(key_ key, Relation relation)
 }
 
 bool RecordManager::haveSameKey(Table& table, int i, key_ key) {
-	// 这里可以用index来判断重复，以提高效率！！！
 	// 以下方法为：加载整张表→从头遍历所有的数据，判断重复
 	// 表中所有的record
 	std::vector<Tuple>& tuple = table.getTuple();

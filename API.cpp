@@ -67,28 +67,40 @@ int main() {
 	// create table
 	api.createTable(table_name, attribute, index);
 
-	// Insert some keys
+	//// generate index
+	api.generate_index(table_name, attribute.name[0], "index0", attribute.type);
+
+	//// Insert some keys
 	api.insertRecord(table_name, tuple1);
 	api.insertRecord(table_name, tuple2);
 	api.insertRecord(table_name, tuple3);
 	api.insertRecord(table_name, tuple4);
 
-	// generate index
-	api.generate_index(table_name, attribute.name[0], "index0", attribute.type);
 	//api.dropTable(table_name);
 	//api.delete_index(table_name, "index0");
-	api.showAttributeInfo(table_name);
+	
+	//api.insertRecord(table_name, tuple4);
 
 	//for (size_t i = 0; i < 1000; i++) {
 		//api.insertRecord(table_name, tuple);
 	//}
 	//std::cout << "Delete " << api.deleteRecord(table_name, relation) << " records.\n";
 
-	//CatalogManager catalog_manager;
-	//catalog_manager.addIndex(table_name, "bno", "bno_index");
-	//api.showAttributeInfo(table_name);
+	std::vector<Relation> relations;
+	Relation one_relation;
+	one_relation.attributeName = "bno";
+	one_relation.key.type = INT;
+	one_relation.sign = LESS;
+	one_relation.key.INT_VALUE = 5;
+	relations.push_back(one_relation);
+	one_relation.sign = GREATER;
+	one_relation.key.INT_VALUE = 1;
+	relations.push_back(one_relation);
+	Table table = api.selectRecord(table_name, relations);
 
-	Table table = api.selectRecord(table_name, relation);
+
+	//api.showAttributeInfo(table_name);
+	//Table table = api.selectRecord(table_name, relation);
 	table.showTable();
 
 

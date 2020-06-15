@@ -71,6 +71,11 @@ public:
 	//			3、Attribute的类型与输入的relation 不匹配，抛出key_type_conflict
 	Table loadRecord(std::string table_name, std::vector<Relation> relation);	//将table_name中所有满足relation关系的tuples装载至这个vector
 
+	// searchWithIndex(std::string table_name, std::vector<int>& elem, std::vector<Relation> relation): 调用索引查找
+	// 输入：表名，单条件关系
+	// 输出：含有范围的std::vector<int>& elem，内含block_id
+	void searchWithIndex(std::string table_name, std::vector<int>& elem, std::vector<Relation> relation);
+
 	//generate index for record manager
 	void generate_index(IndexManager& index_manager, std::string table_name, std::string cur_attr);
 
