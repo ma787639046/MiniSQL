@@ -275,7 +275,7 @@ void RecordManager::generate_index(IndexManager& index_manager, std::string tabl
 	//get block number
 	int block_num = getBlockNumber(table_name);
 	//get file path
-	std::string file_path = "INDEX_FILE" + cur_attr_name + "_" + table_name;
+	std::string file_path = "INDEX_FILE_" + cur_attr_name + "_" + table_name;
 	
 	for (int i = 1; i < block_num; i++) {
 		// 获得页指针

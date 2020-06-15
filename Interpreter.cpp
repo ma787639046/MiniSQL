@@ -242,7 +242,7 @@ void Interpreter::decode_select()
     }
     length_max++;
     
-    //for each attribute
+    //for each attribute, print out the result
     for(int index=0;index<attribute_name.size();index++)
     {
         //for i < (max_lenth-current_length)/2, left part
