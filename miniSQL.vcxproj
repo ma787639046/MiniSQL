@@ -104,6 +104,7 @@
     <ClCompile Include="BufferManager.cpp" />
     <ClCompile Include="CatalogManager.cpp" />
     <ClCompile Include="IndexManager.cpp" />
+    <ClCompile Include="Interpreter.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="RecordManager.cpp" />
     <ClCompile Include="Table.cpp" />
@@ -118,6 +119,7 @@
     <ClInclude Include="const.h" />
     <ClInclude Include="exceptions.h" />
     <ClInclude Include="IndexManager.h" />
+    <ClInclude Include="Interpreter.h" />
     <ClInclude Include="page.h" />
     <ClInclude Include="RecordManager.h" />
     <ClInclude Include="Relation.h" />

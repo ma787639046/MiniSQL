@@ -66,7 +66,7 @@ public:
 	//输入：表名，tuple
 	void showAttributeInfo(std::string table_name);
 
-	int generate_index(std::string table_name, std::string attribute_name, std::string index_name, int* string_sizes);//generate an index based on the attribute of the table
+	int generate_index(std::string table_name, std::string attribute_name, std::string index_name);//generate an index based on the attribute of the table
 	int delete_index(std::string table_name, std::string index_name);//delete the index
 
 };

@@ -151,7 +151,7 @@ void API::showAttributeInfo(std::string table_name)
 
 
 
-int API::generate_index(std::string table_name, std::string attribute_name, std::string index_name, int* string_sizes)//generate an index based on the attribute of the table
+int API::generate_index(std::string table_name, std::string attribute_name, std::string index_name)//generate an index based on the attribute of the table
 {
 	int find_attr_flag = 0;
 	int find_type = 0;
