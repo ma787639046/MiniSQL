@@ -13,36 +13,71 @@ int main() {
 	attribute.num = 3;
 	attribute.name[0] = "bno";		attribute.name[1] = "title";	attribute.name[2] = "price";
 	attribute.type[0] = INT;		attribute.type[1] = 7;		attribute.type[2] = FLOAT;
-	attribute.primary_key = 0;	//没有primary key
+	attribute.primary_key = 0;
 	attribute.unique[0] = true;	attribute.unique[1] = false;	attribute.unique[2] = false;
-	attribute.index[0] = true;		attribute.index[1] = false;		attribute.index[2] = false;
+	attribute.index[0] = false;		attribute.index[1] = false;		attribute.index[2] = false;
 	Index index;
-	index.indexNumber = 1;
-	index.location[0] = 0;
-	index.indexname[0] = "bno_index";
+	index.indexNumber = 0;
 
-	//设置一条tuple
+	//设置tuple
 	key_ key;
 	key.INT_VALUE = 1;
 	key.STRING_VALUE = "Github";
 	key.FLOAT_VALUE = 3.1;
-	Tuple tuple;
+	Tuple tuple1;
 	key.type = INT;
-	tuple.addKey(key);
-	key.type = (keyType)7;
-	tuple.addKey(key);
+	tuple1.addKey(key);
+	key.type = 7;
+	tuple1.addKey(key);
 	key.type = FLOAT;
-	tuple.addKey(key);
+	tuple1.addKey(key);
+
+	key.INT_VALUE = 2;
+	Tuple tuple2;
+	key.type = INT;
+	tuple2.addKey(key);
+	key.type = 7;
+	tuple2.addKey(key);
+	key.type = FLOAT;
+	tuple2.addKey(key);
+
+	key.INT_VALUE = 3;
+	Tuple tuple3;
+	key.type = INT;
+	tuple3.addKey(key);
+	key.type = 7;
+	tuple3.addKey(key);
+	key.type = FLOAT;
+	tuple3.addKey(key);
+
+	key.INT_VALUE = 4;
+	Tuple tuple4;
+	key.type = INT;
+	tuple4.addKey(key);
+	key.type = 7;
+	tuple4.addKey(key);
+	key.type = FLOAT;
+	tuple4.addKey(key);
 
 	//设置空relation
 	std::vector<Relation> relation;
 
 	//开始测试
 	API api;
+	// create table
 	api.createTable(table_name, attribute, index);
+
+	// Insert some keys
+	api.insertRecord(table_name, tuple1);
+	api.insertRecord(table_name, tuple2);
+	api.insertRecord(table_name, tuple3);
+	api.insertRecord(table_name, tuple4);
+
+	// generate index
 	api.generate_index(table_name, attribute.name[0], "index0", attribute.type);
 	//api.dropTable(table_name);
-	//api.showAttributeInfo(table_name);
+	//api.delete_index(table_name, "index0");
+	api.showAttributeInfo(table_name);
 
 	//for (size_t i = 0; i < 1000; i++) {
 		//api.insertRecord(table_name, tuple);
@@ -53,8 +88,8 @@ int main() {
 	//catalog_manager.addIndex(table_name, "bno", "bno_index");
 	//api.showAttributeInfo(table_name);
 
-	//Table table = api.selectRecord(table_name, relation);
-	//table.showTable();
+	Table table = api.selectRecord(table_name, relation);
+	table.showTable();
 
 
 

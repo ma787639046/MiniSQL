@@ -254,15 +254,7 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 //generate index for record manager
 void RecordManager::generate_index(IndexManager& index_manager, std::string table_name, std::string cur_attr_name)
 {
-	std::string tmp_table_name = table_name;
-	table_name += RECORD_PATH;
 	CatalogManager catalog_manager;
-	//check table is exist
-	if (!catalog_manager.havetable(table_name))
-	{
-		std::cout << "Table not exsits in generating index of record manager\n";
-		throw table_not_exist();
-	}
 	Attribute attr = catalog_manager.getAttribute(table_name);
 	//find the cur_attr_name
 	int index = -1;
@@ -283,7 +275,7 @@ void RecordManager::generate_index(IndexManager& index_manager, std::string tabl
 	//get block number
 	int block_num = getBlockNumber(table_name);
 	//get file path
-	std::string file_path = "INDEX_FILE" + cur_attr_name + "_" + tmp_table_name;
+	std::string file_path = "INDEX_FILE" + cur_attr_name + "_" + table_name;
 	
 	for (int i = 1; i < block_num; i++) {
 		// 获得页指针
@@ -510,7 +502,7 @@ bool RecordManager::haveSameKey(Table& table, int i, key_ key) {
 	// 以下方法为：加载整张表→从头遍历所有的数据，判断重复
 	// 表中所有的record
 	std::vector<Tuple>& tuple = table.getTuple();
-	for (size_t m = 0; m < tuple.size(); i++) {
+	for (size_t m = 0; m < tuple.size(); m++) {
 		if (key.type == INT) {
 			if (tuple[m].getKeys()[i].INT_VALUE == key.INT_VALUE)
 				return true;
