@@ -1,14 +1,5 @@
 #include "Interpreter.h"
 
-
-
-
-int main()
-{
-    std::cout << "Hello, minisql\n";
-    return 0;
-}
-
 Interpreter::Interpreter(){}
 Interpreter::~Interpreter(){}
 

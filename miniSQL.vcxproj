@@ -105,6 +105,7 @@
     <ClCompile Include="CatalogManager.cpp" />
     <ClCompile Include="IndexManager.cpp" />
     <ClCompile Include="Interpreter.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="page.cpp" />
     <ClCompile Include="RecordManager.cpp" />
     <ClCompile Include="Table.cpp" />

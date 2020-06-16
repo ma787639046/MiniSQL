@@ -1,3 +1,9 @@
+//
+//	API.h
+//	Created by MGY on 2020/06/10
+//	Co-author ZZJ
+//
+
 /*
 	API：封装底层的3个Manager的各函数，提供接口给顶层Interpreter使用
 		API不产生异常，异常的产生由底层Manager进行；
@@ -12,7 +18,7 @@
 #include "IndexManager.h"
 #include "const.h"
 
-BufferManager buffer_manager;
+extern BufferManager buffer_manager;
 
 
 class API {
