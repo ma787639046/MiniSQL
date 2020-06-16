@@ -515,7 +515,8 @@ void Interpreter::decode_delete()
     if (query[cur_p + 1] == '\0')
     {
         attr_find_name = "";
-        api.deleteRecord(table_name, attr_find_name, relation);
+        std::vector<Relation> relations_v;
+        api.deleteRecord(table_name, relations_v);
         std::cout << "$ Deletion Success\n";
         return;
     }
@@ -530,7 +531,8 @@ void Interpreter::decode_delete()
     //get attribute
     attr_find_name = fetch_word(cur_p + 7, cur_p);
     //chech attribute
-    if (!catalog_manager.haveAttribute(table_name, attr_find_name))
+    int attribute_num;
+    if (!catalog_manager.haveAttribute(table_name, attr_find_name, attribute_num))
     {
         std::cout << "no this attribute in delete\n";
         throw attribute_not_exist();

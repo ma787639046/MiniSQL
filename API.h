@@ -5,7 +5,7 @@
 */
 #pragma once
 
-
+#include <time.h>
 #include "Table.h"
 #include "RecordManager.h"
 #include "CatalogManager.h"

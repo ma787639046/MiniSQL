@@ -5,20 +5,6 @@
 
 #include "RecordManager.h"
 
-//int main() {
-//	RecordManager m;
-//	Tuple tuple;
-//	key_ key;
-//	key.INT_VALUE = 0;
-//	tuple.addTuple(key);
-//	key.FLOAT_VALUE = 2.1f;
-//	tuple.addTuple(key);
-//	key.STRING_VALUE = "ABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGHABCDEFGH";
-//	tuple.addTuple(key);
-//
-//	return 0;
-//}
-
 void RecordManager::createTableFile(std::string table_name)
 {
 	int blocknum = 2;	//第一块记录blocknum信息，记录储存从第二块开始
