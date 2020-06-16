@@ -1,6 +1,14 @@
 #include "Interpreter.h"
 
 
+
+
+int main()
+{
+    std::cout << "Hello, minisql\n";
+    return 0;
+}
+
 Interpreter::Interpreter(){}
 Interpreter::~Interpreter(){}
 
@@ -561,8 +569,8 @@ void Interpreter::decode_delete()
     {
         if (attr_find_name == attr_delete.name[i])//find corresponding one
         {
-            relation.key.type = attr_delete.type;
-            int cur_type = attr_delete.type;
+            relation.key.type = attr_delete.type[i];
+            int cur_type = attr_delete.type[i];
             if (cur_type == -1)//int
             {
                 try
@@ -594,9 +602,9 @@ void Interpreter::decode_delete()
                 try
                 {
                     //if there is no ' or "
-                    if (value_insert[0] != '\'' || value_insert[value_insert.length() - 1] != '\'')
+                    if (value_delete[0] != '\'' || value_delete[value_delete.length() - 1] != '\'')
                     {
-                        if (value_insert[0] != '"' || value_insert[value_insert.length() - 1] != '"')
+                        if (value_delete[0] != '"' || value_delete[value_delete.length() - 1] != '"')
                         {
                             std::cout << "no \' or \" detected\n";
                             throw input_format_error();
@@ -616,7 +624,10 @@ void Interpreter::decode_delete()
         }
     }
     //delete the record
-    api.deleteRecord(table_name, attr_find_name, relation);
+    relation.attributeName = attr_find_name;
+    std::vector<Relation> relations;
+    relations.push_back(relation);
+    api.deleteRecord(table_name, relations);
     std::cout << "$ Deletion Success \n";
 }
 void Interpreter::decode_exit()
@@ -742,12 +753,12 @@ void Interpreter::decode_table_create()
         new_attr.type[attr_num] = get_type(cur_p, cur_p);
         new_attr.unique[attr_num] = false;
         
-        //check unque
+        //check unique
         if (query[cur_p + 1] == 'u' || query[cur_p + 1] == 'U')
         {
             if (fetch_word(cur_p + 1, cur_p) == "unique") 
             {
-                attr_create.unique[attr_num] = true;
+                new_attr.unique[attr_num] = true;
             }
             else
             {
@@ -1084,7 +1095,7 @@ void Interpreter::catch_erro()
     {
         std::cout << "attribute not exist!" << std::endl;
     }
-    catch (index_exist error) 
+    catch (index_exist_conflict error) 
     {
         std::cout << "index has existed!" << std::endl;
     }

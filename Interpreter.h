@@ -1,3 +1,4 @@
+#pragma once
 #include "iostream"
 #include "API.h"
 #include "Relation.h"
