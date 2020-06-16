@@ -4,29 +4,36 @@
 
 class BufferManager {
 public: 
-    // 构造函数
     BufferManager() { newBuffer(MAXBUFFERSIZE);};
     BufferManager(int page_num) { newBuffer(page_num);};
-    // 析构函数
     ~BufferManager();
-    // 通过页号得到页的地址
+    // getPage()：通过页号得到PAGESIZE大小的page的地址
+    // 输入：文件名，块号
+    // 返回：PAGESIZE大小的page首地址
     char* getPage(std::string file_name , int blockID);
-    // 标记pageID所对应的页已经被修改
+    // setDirty()：标记pageID所对应的页已经被修改
+    // 输入：page_id
     void setDirty(int pageID);
-    // 钉住一个页
+    // pinPage()：pin某个page一次
+    // 输入：page_id
     void pinPage(int pageID);
-    // 解除一个页的钉住状态(需要注意的是一个页可能被多次钉住，该函数只能解除一次)
-    // 如果对应页的pin为0，则返回-1
+    // unpinPage()：unpin某个page一次
+    // 输入：page_id
+    // 返回：如果对应页不再被pin，则返回-1
     int unpinPage(int pageID);
-    // 将对应内存页写入对应文件的对应块。
+    // swapOutPage()：将页写入对应文件的对应块。
+    // 输入：页号，文件名，块号
     void swapOutPage(int pageID , std::string file_name , int blockID);
-    // 获取对应文件的对应块在内存中的页号，没有找到返回-1
+    // getPageId()：通过blockID获取pageID
+    // 输入：文件名，块号
+    // 返回：页号
     int getPageId(std::string file_name , int blockID);
 private:
     // 页数组，作为buffer pool
     Page* BufferPool;
     // 总页数
     int PageNum;
+    // 页替换指针标记
     int clockPos;
     // 初始化函数：设置page_num个页的buffer
     void newBuffer(int page_num);
