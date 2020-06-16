@@ -24,9 +24,6 @@
     <ClCompile Include="CatalogManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="page.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="RecordManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

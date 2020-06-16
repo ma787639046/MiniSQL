@@ -7,8 +7,15 @@
 
 class Page {
 public:
-    Page() { clear(); };
-    void clear();   //清空页信息
+    Page() {
+        filename = "";
+        blockID = -1;
+        pinNum = 0;
+        isDirty = false;
+        clockReference = false;
+        valid = false;
+        memset(page, 0, PAGESIZE);
+    };
     void setFileName(std::string file_name);
     std::string getFileName();
     void setBlockId(int block_id);
@@ -24,13 +31,13 @@ public:
     bool getValid();
     char* getPagePointer();
 private:
-    char page[PAGESIZE];//每一页都是一个大小为PAGESIZE字节的数组
-    std::string filename;//页所对应的文件名
-    int blockID;//页在所在文件中的块号(磁盘中通常叫块)
-    int pinNum;//记录被钉住的次数。被钉住的意思就是不可以被替换
-    bool isDirty;//dirty记录页是否被修改
-    bool clockReference;//ref变量用于时钟替换策略
-    bool valid;//avaliable标示页是否可以被使用(即将磁盘块load进该页)
+    char page[PAGESIZE];
+    std::string filename;
+    int blockID;
+    int pinNum;
+    bool isDirty;
+    bool clockReference;
+    bool valid;
 };
 
 inline void Page::setFileName(std::string file_name) {
