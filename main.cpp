@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 	while (true)
 	{
 		interpreter.read_in_command();
-		interpreter.decode();
+		interpreter.catch_erro();
 	}
 	return 0;
 }

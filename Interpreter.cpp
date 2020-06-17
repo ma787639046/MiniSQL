@@ -1033,8 +1033,16 @@ void Interpreter::split_space()
     {
         if (query[cur_p] == '<' || query[cur_p] == '>' || query[cur_p] == '(' || query[cur_p] == ')' || query[cur_p] == '*' || query[cur_p] == ',' || query[cur_p] == '=')
         {
-            if (query[cur_p + 1] != ' ') query.insert(++cur_p, " ");
-            if (query[cur_p - 1] != ' ') query.insert(cur_p++, " ");
+            if (query[cur_p - 1] != ' ')
+            {
+                query.insert(cur_p, " ");
+                cur_p++;
+            }
+            if (query[cur_p + 1] != ' ')
+            {
+                query.insert(cur_p + 1, " ");
+                cur_p++;
+            }
         }
     }
     //add a space at the end
