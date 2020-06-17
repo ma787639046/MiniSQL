@@ -17,13 +17,29 @@
                 数量num、属性名name[i]、主键位置primary_key、键值类型type[i]、unique[i]、是否存在索引index[i]、
 */
 
-struct Attribute{
+class Attribute
+{
+public:
     int num;  //属性总数
     std::string name[32];  //属性的名字
     int primary_key;  //主键，-1为不存在主键，其他则为主键的loaction
     int type[32];  //属性的类型
     bool unique[32];  //属性是否unique
     bool index[32]; //是否存在索引
+public:
+    Attribute()
+    {
+        num = 0;
+        primary_key = -1;
+
+        for (int i = 0; i < 32; i++)
+        {
+            unique[i] = false;
+            index[i] = false;
+            type[i] = -2;
+            name[i] = "";
+        }
+    }
 };
 
 struct Index{

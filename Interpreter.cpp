@@ -721,6 +721,7 @@ void Interpreter::decode_table_create()
                         is_find = 0;
                         primary = pk_index;
                         new_attr.unique[pk_index] = true;
+                        new_attr.primary_key = pk_index;
                         cur_p += 2;
                         break;
                     }
@@ -870,7 +871,7 @@ void Interpreter::read_in_command()
         //read in cur_s
         getline(std::cin, cur_s);
         //add it into query
-        query += cur_s;
+        query = cur_s;
         query += ' ';
     } while (cur_s[cur_s.length() - 1] != ';');
     query[query.length() - 2] = '\0';
