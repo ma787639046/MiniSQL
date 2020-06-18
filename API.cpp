@@ -5,10 +5,22 @@ void API::createTable(std::string table_name, Attribute attribute, Index index)
 {
 	catalog_manager.createTable(table_name, attribute, index);
 	record_manager.createTableFile(table_name);
+	if (attribute.primary_key > -1 && attribute.primary_key < attribute.num) {
+		// 自动根据primary key，建索引
+		generate_index(table_name, attribute.name[attribute.primary_key], attribute.name[attribute.primary_key] + "_index");
+	}
 }
 
 void API::dropTable(std::string table_name)
 {
+	// 先遍历所有index，删除这个表的所有index
+	Attribute attr = catalog_manager.getAttribute(table_name);
+	Index index = catalog_manager.getIndex(table_name);
+	for (int i = 0; i < index.indexNumber; i++) {
+		if (attr.index[index.location[i]]) {
+			delete_index(table_name, index.indexname[i]);
+		}
+	}
 	catalog_manager.dropTable(table_name);
 	record_manager.dropTableFile(table_name);
 }
