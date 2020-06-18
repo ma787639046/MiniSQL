@@ -105,7 +105,7 @@ int API::delete_index(std::string table_name, std::string index_name)//delete th
 	{
 		index_manager.drop_index(path, (int)attr_tmp.type[i]);
 		catalog_manager.dropIndex(table_name, index_name);
-		path += INDEX_PATH;
+		path = INDEX_PATH + path;
 		remove(path.c_str());//make path from string to char *, then remove
 		return 1;
 	}

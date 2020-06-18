@@ -16,10 +16,6 @@ void RecordManager::createTableFile(std::string table_name)
 	for (size_t i = 0; i < PAGESIZE - 2 * sizeof(int); i++)
 		fs.write("\0", 1);	//补充至PAGESIZE
 	fs << empty_block;	//在第二块写入块头信息
-	//FILE* f = fopen(table_path.c_str(), "w");
-	//for (size_t i = 0; i < empty_block.size(); i++)
-	//	fputc(empty_block[i], f);
-	//fclose(f);
 }
 
 void RecordManager::dropTableFile(std::string table_name)
@@ -134,6 +130,16 @@ int RecordManager::deleteRecord(std::string table_name)
 		setBlockStringSize(3 * sizeof(int), page_pointer);	//重置block size
 		buffer_manager.setDirty(buffer_manager.getPageId(filename, i));		//设置脏页
 	}
+	// 清空索引
+	IndexManager index_manager(table_name);
+	Attribute attr = catalog_manager.getAttribute(table_name);
+	Index index = catalog_manager.getIndex(table_name);
+	for (int i = 0; i < index.indexNumber; i++) {
+		if (attr.index[index.location[i]]) {
+			std::string filename = "INDEX_FILE_" + attr.name[index.location[i]] + "_" + table_name;
+			index_manager.drop_index(filename, (int)attr.type[index.location[i]]);
+		}
+	}
 	return deleteNum;
 }
 
@@ -144,24 +150,25 @@ int RecordManager::deleteRecord(std::string table_name, std::vector<Relation> re
 	// 判断对应表名是否存在
 	CatalogManager catalog_manager;
 	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
-	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
+	Attribute attr = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
+	Index index_ = catalog_manager.getIndex(table_name);
 	for (int i = 0, temp = 0; i < relation.size(); i++) {
 		if (!catalog_manager.haveAttribute(table_name, relation[i].attributeName, temp)) throw attribute_not_exist();
 		index.push_back(temp);	//存入属性的序号
 	}
 	// 检查Attribute的类型与输入的relation是否匹配
 	for (size_t i = 0; i < relation.size(); i++) {
-		if (attribute.type[index[i]] != relation[i].key.type) throw key_type_conflict();
+		if (attr.type[index[i]] != relation[i].key.type) throw key_type_conflict();
 	}
 	// 建立表对象
-	Table table(table_name, attribute);
+	Table table(table_name, attr);
 	// 获取总block数量
 	int block_number = getBlockNumber(table_name);
-	// 从第一个block开始，装入Tuple
+	// 从第二个block开始，装入Tuple
 	std::vector<Tuple>& tuple = table.getTuple();
 	std::string filename = RECORD_PATH + table_name + ".db";
-	// 从第一个block开始，装入Tuple
-	for (int i = 0; i < block_number; i++) {
+	// 从第二个block开始，装入Tuple
+	for (int i = 1; i < block_number; i++) {
 		char* page_pointer = buffer_manager.getPage(filename, i);
 		int offset = 3 * sizeof(int);
 		// 获得tuple个数
@@ -178,13 +185,22 @@ int RecordManager::deleteRecord(std::string table_name, std::vector<Relation> re
 			// 满足条件，删除这个tuple
 			if (isRelation) {
 				deleteNum++;	//删除条目数+1
-				for (int j = ori_offset; j < getBlockStringSize(page_pointer) - offset && j < PAGESIZE; j++ ) {
-					page_pointer[j] = page_pointer[offset - ori_offset + j];	//将后面的数据覆盖到前面
-					setTupleStringSize(getTupleNum(page_pointer) - 1, page_pointer);	//记录数 - 1
-					setBlockStringSize(getBlockStringSize(page_pointer)  - offset + ori_offset, page_pointer);	//设置block size
+				for (int j = 0; j < getBlockStringSize(page_pointer) - offset && j < PAGESIZE; j++ ) {
+					page_pointer[j + ori_offset] = page_pointer[offset + j];	//将后面的数据覆盖到前面
+					
 				}
+				setTupleStringSize(getTupleNum(page_pointer) - 1, page_pointer);	//记录数 - 1
+				setBlockStringSize(getBlockStringSize(page_pointer) - offset + ori_offset, page_pointer);	//设置block size
 				buffer_manager.setDirty(buffer_manager.getPageId(filename, i));		//设置脏页
 				offset = ori_offset;	//offset移回当前起始位置
+			}
+			// 满足条件，删除b+树索引中的这条记录
+			if (isRelation && index_.indexNumber > 0) {
+				IndexManager index_manager(table_name);
+				for (int m = 0; m < index_.indexNumber; m++) {
+					std::string indexfilename = "INDEX_FILE_" + attr.name[index_.location[m]] + "_" + table_name;
+					index_manager.delete_index(indexfilename, keys[index_.location[m]], attr.type[index_.location[m]]);
+				}
 			}
 		}
 	}
@@ -386,20 +402,6 @@ void RecordManager::generate_index(IndexManager& index_manager, std::string tabl
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 std::string RecordManager::encodeTuple(Tuple tuple) {
 	std::stringstream s;
