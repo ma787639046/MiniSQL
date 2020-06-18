@@ -13,9 +13,9 @@ BufferManager buffer_manager;
 int main(int argc, char* argv[]) {
 	std::cout << "====    Welcome to MiniSQL created by MGY & ZZJ!    ====\n";
 	std::cout << "Please input your query:\n";
-	Interpreter interpreter;
 	while (true)
 	{
+		Interpreter interpreter;
 		interpreter.read_in_command();
 		interpreter.catch_erro();
 	}

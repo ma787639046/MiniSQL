@@ -871,7 +871,7 @@ void Interpreter::read_in_command()
         //read in cur_s
         getline(std::cin, cur_s);
         //add it into query
-        query = cur_s;
+        query += cur_s;
         query += ' ';
     } while (cur_s[cur_s.length() - 1] != ';');
     query[query.length() - 2] = '\0';
