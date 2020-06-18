@@ -44,7 +44,7 @@ void Interpreter::decode_select()
     table_name = fetch_word(cur_index, cur_index);
     if(!catalog_manager.havetable(table_name))
     {
-        std::cout<<"No such table name\n";
+        std::cout<<"No such table named "<<table_name<<" \n";
         throw table_not_exist();
     }
     //get attr
@@ -196,7 +196,7 @@ void Interpreter::decode_select()
     }
     std::vector<Tuple> ret_tuple = ret_table.getTuple();
     
-    //get the max attr_key length
+    //get the max attr_key length from attribute name
     int length_max = -5;
     for(int i=0;i<attribute_name.size();i++)
     {
@@ -205,7 +205,7 @@ void Interpreter::decode_select()
             length_max = (int)current_attr.name[attr_pointer[i]].length();
         }
     }
-    for(int index=0;index<attribute_name.size();index++)
+    for(int index=0;index<attribute_name.size();index++)//get the max length from attribute value
     {
         int type = current_attr.type[attr_pointer[index]];
         if(type == -1)//int
@@ -232,9 +232,9 @@ void Interpreter::decode_select()
         {
             for(int i=0;i<ret_tuple.size();i++)
             {
-                if(length_max < get_len((int)ret_tuple[i].getKeys()[attr_pointer[index]].STRING_VALUE.length()))
+                if(length_max < ret_tuple[i].getKeys()[attr_pointer[index]].STRING_VALUE.length())
                 {
-                    length_max = get_len((int)ret_tuple[i].getKeys()[attr_pointer[index]].STRING_VALUE.length());
+                    length_max = (int)ret_tuple[i].getKeys()[attr_pointer[index]].STRING_VALUE.length();
                 }
             }
         }
@@ -251,7 +251,7 @@ void Interpreter::decode_select()
         }
         std::cout<<current_attr.name[attr_pointer[index]].c_str();
         //for i < (max_lenth-current_length)/2, right part
-        for(int i=0;i<current_attr.name[attr_pointer[index]].length()/2;i++)
+        for(int i=0; i < (length_max - current_attr.name[attr_pointer[index]].length()) / 2;i++)
         {
             std::cout<<" ";
         }
@@ -351,16 +351,18 @@ catalog_manager.showCatalog(table_name);
 
 void Interpreter::decode_insert()
 {
-    std::string table_name;
+    
     API api;
     CatalogManager catalog_manager;
     Attribute attr_find;
     Tuple cur_tuple;
     int cur_p;
+    //get being inserted table name
+    std::string table_name = fetch_word(12, cur_p);
 
     if (!catalog_manager.havetable(table_name))
     {
-        std::cout << "table not exsits\n";
+        std::cout << "table named "<<table_name<<" not exsits\n";
         throw table_not_exist();
     }
     if (query.substr(7, 4) != "into")//no into after INSERT
@@ -369,8 +371,8 @@ void Interpreter::decode_insert()
         throw input_format_error();
     }
 
-    //get being inserted table name
-    table_name = fetch_word(12, cur_p);
+    
+
 
     if (query.substr(cur_p + 1, 6) != "values")//no values after table name
     {
@@ -479,7 +481,7 @@ void Interpreter::decode_insert()
     }
     //insert the tuple into record
     api.insertRecord(table_name, cur_tuple);
-    std::cout << "$ Insertion Success! \n";
+    std::cout << "Insertion Success! \n";
 }
     
 void Interpreter::decode_delete()
@@ -516,7 +518,7 @@ void Interpreter::decode_delete()
         attr_find_name = "";
         std::vector<Relation> relations_v;
         api.deleteRecord(table_name, relations_v);
-        std::cout << "$ Deletion Success\n";
+        std::cout << "Deletion Success\n";
         return;
     }
 
@@ -527,99 +529,119 @@ void Interpreter::decode_delete()
         std::cout << "no where in delete\n";
         throw 1;
     }
-    //get attribute
-    attr_find_name = fetch_word(cur_p + 7, cur_p);
-    //chech attribute
-    int attribute_num;
-    if (!catalog_manager.haveAttribute(table_name, attr_find_name, attribute_num))
-    {
-        std::cout << "no this attribute in delete\n";
-        throw attribute_not_exist();
-    }
-    //get the condition
-    condition = get_condition(cur_p + 1, cur_p);
-    
-    if (condition == "<") relation.sign = LESS;
-    else if (condition == "<=" || condition == "< =") relation.sign = LESS_OR_EQUAL;
-    else if (condition == "=") relation.sign = EQUAL;
-    else if (condition == ">=" || condition == "> =") relation.sign = GREATER_OR_EQUAL;
-    else if (condition == ">") relation.sign = GREATER;
-    else if (condition == "<>") relation.sign = NOT_EQUAL;
-    else
-    {
-        std::cout << "not supported relation\n";
-        throw 1;
-    }
-
-    //get the value and corresponding attribute
-    std::string value_delete = fetch_word(cur_p + 1, cur_p);
-    Attribute attr_delete = catalog_manager.getAttribute(table_name);
-
-    //do every attribute to find corresponding
-    for (int i = 0; i < attr_delete.num; i++)
-    {
-        if (attr_find_name == attr_delete.name[i])//find corresponding one
-        {
-            relation.key.type = attr_delete.type[i];
-            int cur_type = attr_delete.type[i];
-            if (cur_type == -1)//int
-            {
-                try
-                {
-                    relation.key.INT_VALUE = string2num<int>(value_delete);
-                }
-                catch (...)
-                {
-                    std::cout << "int value get failed in delete\n";
-                    throw key_type_conflict();
-                }
-                break;
-            }
-            else if (cur_type == 0)//float
-            {
-                try
-                {
-                    relation.key.FLOAT_VALUE= string2num<float>(value_delete);
-                }
-                catch (...)
-                {
-                    std::cout << "float value get failed in delete\n";
-                    throw key_type_conflict();
-                }
-                break;
-            }
-            else//string
-            {
-                try
-                {
-                    //if there is no ' or "
-                    if (value_delete[0] != '\'' || value_delete[value_delete.length() - 1] != '\'')
-                    {
-                        if (value_delete[0] != '"' || value_delete[value_delete.length() - 1] != '"')
-                        {
-                            std::cout << "no \' or \" detected\n";
-                            throw input_format_error();
-                        }
-
-                    }
-                    relation.key.STRING_VALUE = value_delete.substr(1,value_delete.length()-2);
-                }
-                catch (...)
-                {
-                    std::cout << "string value get failed in delete\n";
-                    throw key_type_conflict();
-                }
-                break;
-            }
-            
-        }
-    }
-    //delete the record
-    relation.attributeName = attr_find_name;
+    cur_p += 7;
     std::vector<Relation> relations;
-    relations.push_back(relation);
+
+    //read in every relation
+    while (1)
+    {
+        //get attribute
+        attr_find_name = fetch_word(cur_p, cur_p);
+        //chech attribute
+        int attribute_num;
+        if (!catalog_manager.haveAttribute(table_name, attr_find_name, attribute_num))
+        {
+            std::cout << "no this attribute in delete\n";
+            throw attribute_not_exist();
+        }
+        //get the condition
+        condition = get_condition(cur_p + 1, cur_p);
+    
+        if (condition == "<") relation.sign = LESS;
+        else if (condition == "<=" || condition == "< =") relation.sign = LESS_OR_EQUAL;
+        else if (condition == "=") relation.sign = EQUAL;
+        else if (condition == ">=" || condition == "> =") relation.sign = GREATER_OR_EQUAL;
+        else if (condition == ">") relation.sign = GREATER;
+        else if (condition == "<>") relation.sign = NOT_EQUAL;
+        else
+        {
+            std::cout << "not supported relation\n";
+            throw 1;
+        }
+
+        //get the value and corresponding attribute
+        std::string value_delete = fetch_word(cur_p + 1, cur_p);
+        Attribute attr_delete = catalog_manager.getAttribute(table_name);
+
+        //do every attribute to find corresponding
+        for (int i = 0; i < attr_delete.num; i++)
+        {
+            if (attr_find_name == attr_delete.name[i])//find corresponding one
+            {
+                relation.key.type = attr_delete.type[i];
+                int cur_type = attr_delete.type[i];
+                if (cur_type == -1)//int
+                {
+                    try
+                    {
+                        relation.key.INT_VALUE = string2num<int>(value_delete);
+                    }
+                    catch (...)
+                    {
+                        std::cout << "int value get failed in delete\n";
+                        throw key_type_conflict();
+                    }
+                    break;
+                }
+                else if (cur_type == 0)//float
+                {
+                    try
+                    {
+                        relation.key.FLOAT_VALUE= string2num<float>(value_delete);
+                    }
+                    catch (...)
+                    {
+                        std::cout << "float value get failed in delete\n";
+                        throw key_type_conflict();
+                    }
+                    break;
+                }
+                else//string
+                {
+                    try
+                    {
+                        //if there is no ' or "
+                        if (value_delete[0] != '\'' || value_delete[value_delete.length() - 1] != '\'')
+                        {
+                            if (value_delete[0] != '"' || value_delete[value_delete.length() - 1] != '"')
+                            {
+                                std::cout << "no \' or \" detected\n";
+                                throw input_format_error();
+                            }
+
+                        }
+                        relation.key.STRING_VALUE = value_delete.substr(1,value_delete.length()-2);
+                    }
+                    catch (...)
+                    {
+                        std::cout << "string value get failed in delete\n";
+                        throw key_type_conflict();
+                    }
+                    break;
+                }
+            }
+        }
+        //push this relation into it
+        relation.attributeName = attr_find_name;
+        relations.push_back(relation);
+
+        //read next relation
+        if (query[cur_p + 1] == '\0')//end of conditions
+        {
+            break;
+        }
+        else if (query.substr(cur_p + 1, 3) != "and")//relations are not ands
+        {
+            std::cout << "Input format error: no condition \"and\" found\n";
+            throw 1;
+        }
+        fetch_word(cur_p + 1, cur_p);//eat the "and"
+        cur_p++;//read in next condition
+    }
+
+    
     api.deleteRecord(table_name, relations);
-    std::cout << "$ Deletion Success \n";
+    std::cout << "Deletion Success \n";
 }
 void Interpreter::decode_exit()
 {
