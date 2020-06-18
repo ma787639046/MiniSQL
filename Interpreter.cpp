@@ -1,6 +1,22 @@
 #include "Interpreter.h"
 
-Interpreter::Interpreter(){}
+Interpreter::Interpreter()
+{
+    current_table_name = "";
+    query = "";
+}
+
+Interpreter::Interpreter(std::string cur_table_name)
+{
+    current_table_name = cur_table_name;
+    query = "";
+}
+
+void Interpreter::set_cur_table_name(std::string cur_table_name)
+{
+    current_table_name = cur_table_name;
+}
+
 Interpreter::~Interpreter(){}
 
 void Interpreter::decode_select()
@@ -101,7 +117,7 @@ void Interpreter::decode_select()
             tmp_element = fetch_word(cur_index+1, cur_index);//get the number
             for(int i=0;i<tmp_attr.num;i++)
             {
-                if(tmp_cur_attr_name == tmp_attr.name[i])//find the attribute
+                if(tmp_cur_attr_name == tmp_attr.name[i])//find the attribute to be selected under relation
                 {
                     tmp_relation.key.type = (keyType)tmp_attr.type[i];
                     if(tmp_relation.key.type==INT)//-1
@@ -141,6 +157,7 @@ void Interpreter::decode_select()
                                     throw input_format_error();
                                 }
                             }
+                            tmp_relation.key.STRING_VALUE = tmp_element.substr(1, tmp_element.length() - 2);
                         }
                         catch(input_format_error)
                         {
@@ -682,15 +699,18 @@ void Interpreter::decode_file_read()
         i++;
         head = i;
         split_space();//split with each space
-        catch_erro();//decode and catch error
+        std::string my_cur_table_name = catch_erro();//decode and catch error
     } while (cur_query[i] != '\0');
 }
 
-void Interpreter::decode_table_create()
+std::string Interpreter::decode_table_create()
 {
+    std::string my_cur_table_name = "";
     API api;
     int cur_p = -1;
     std::string table_name = fetch_word(13, cur_p);//get the table name
+    current_table_name = table_name;
+    my_cur_table_name = table_name;
 
     Attribute new_attr;
     std::string attr_name;
@@ -786,10 +806,12 @@ void Interpreter::decode_table_create()
     //create table
     api.createTable(table_name, new_attr,index_create);//???
     std::cout << "Create Table Success\n";
+    return my_cur_table_name;
 }
 void Interpreter::decode_table_drop()
 {
     int cur_p;
+    current_table_name = "";
     
     //get the table name
     std::string table_name = fetch_word(11, cur_p);
@@ -859,24 +881,9 @@ void Interpreter::decode_index_delete()
     std::string index_name = fetch_word(11, cur_p);
     cur_p++;
 
-    if (query.substr(cur_p, 2) != "on")
-    {
-        std::cout << "no on when deleting index\n";
-        throw 1;
-    }
-
-    //get table name
-    std::string table_name = fetch_word(cur_p + 3, cur_p);
-
-    if (query[cur_p + 1] != '\0')
-    {
-        std::cout << "no end after table name\n";
-        throw 1;
-    }
-
+    std::string table_name = current_table_name;
     //delete the index
     api.delete_index(table_name, index_name);
-
     std::cout << "Delete Index Success\n";
 }
 
@@ -895,14 +902,16 @@ void Interpreter::read_in_command()
         //add it into query
         query += cur_s;
         query += ' ';
-    } while (cur_s[cur_s.length() - 1] != ';');
+    } while (cur_s.length()==0||cur_s[cur_s.length() - 1] != ';');
+    
     query[query.length() - 2] = '\0';
     split_space();
 }
 
 
-void Interpreter::decode()
+std::string Interpreter::decode()
 {
+    std::string my_cur_table_name = "";
     if (query.substr(0, 6) == "select") 
     {
         decode_select();
@@ -918,7 +927,7 @@ void Interpreter::decode()
     }
     else if (query.substr(0, 6) == "create") 
     {
-        if (query.substr(7, 5) == "table") decode_table_create();
+        if (query.substr(7, 5) == "table") my_cur_table_name = decode_table_create();
         else if (query.substr(7, 5) == "index") decode_index_generate();   
     }
     else if (query.substr(0, 6) == "delete") 
@@ -942,6 +951,7 @@ void Interpreter::decode()
         std::cout << "current query's format is wrong when decoding\n";
         throw input_format_error();
     }
+    return my_cur_table_name;
 }
 
 
@@ -1099,11 +1109,12 @@ void Interpreter::split_space()
     //delete head space
     if (query[0] == ' ') query.erase(query.begin());
 }
-void Interpreter::catch_erro()
+std::string Interpreter::catch_erro()
 {
+    std::string my_cur_table_name = "";
     try
     {
-        decode();
+        my_cur_table_name = decode();
     }
     catch (table_name_conflict error) 
     {
@@ -1153,4 +1164,5 @@ void Interpreter::catch_erro()
     catch (...) {
         std::cout << "input format error!" << std::endl;
     }
+    return my_cur_table_name;
 }
