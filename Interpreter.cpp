@@ -673,9 +673,16 @@ void Interpreter::decode_file_read()
 
     std::string path = fetch_word(9, cur_p);
 
+    if (query[cur_p]==' ')
+    {
+        query[cur_p] = '\0';
+    }
+
     //more after path
     if (query[cur_p] != '\0')
     {
+        query[cur_p] = '\0';
+
         std::cout << "more char after path\n";
         throw 1;
     }
@@ -688,16 +695,28 @@ void Interpreter::decode_file_read()
 
     //get and decode every query line in this file
     int i = 0;
-    int head = 0;
+
     do
     {
-        while (cur_query[i]!='\n')
+        char tmp[1000] = "";
+        int tmp_index = 0;
+        while (cur_query[i] != ';')
         {
+            if (cur_query[i] == '\n')
+            {
+                i++;
+                continue;
+            }
+            tmp[tmp_index] = cur_query[i];
+            tmp_index++;
             i++;
         }
-        query = cur_query.substr(head, i - head);//get the query
+        //tmp[tmp_index] = cur_query[i];
+        //tmp_index++;
+        tmp[tmp_index] = '\0';
+        tmp_index++;
+        query = tmp;//get the query
         i++;
-        head = i;
         split_space();//split with each space
         std::string my_cur_table_name = catch_erro();//decode and catch error
     } while (cur_query[i] != '\0');
