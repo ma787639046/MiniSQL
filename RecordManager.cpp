@@ -275,7 +275,7 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	if (search_with_index) {
 		std::vector<int> block_id_range;
 		searchWithIndex(table_name, block_id_range, relation);
-		if (block_id_range.size() > 0) {
+		if (block_id_range.size() > 0 && block_id_range[0] != -1) {	//index找到了range
 			for (std::vector<int>::iterator i = block_id_range.begin(); i != block_id_range.end(); i++) {
 				// 获得页指针
 				char* page_pointer = buffer_manager.getPage(filepath, *i);
