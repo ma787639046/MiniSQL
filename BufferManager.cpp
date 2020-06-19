@@ -32,7 +32,7 @@ int BufferManager::unpinPage(int pageID) {
 }
 
 int BufferManager::loadDiskBlock(int pageID , std::string file_name , int blockID) {
-    FILE* file = fopen(file_name.c_str() , "r");
+    FILE* file = fopen(file_name.c_str() , "rb");
     if (file == nullptr) return -1; //找不到文件
     fseek(file , PAGESIZE * blockID , SEEK_SET);
     char* buffer = BufferPool[pageID].getPagePointer();
@@ -48,7 +48,7 @@ int BufferManager::loadDiskBlock(int pageID , std::string file_name , int blockI
 }
 
 void BufferManager::swapOutPage(int pageID , std::string file_name , int blockID) {
-    FILE* file = fopen(file_name.c_str() , "r+");
+    FILE* file = fopen(file_name.c_str() , "rb+");
     if (file == nullptr) return; //找不到文件
     fseek(file , PAGESIZE * blockID , SEEK_SET);
     char* buffer = BufferPool[pageID].getPagePointer();

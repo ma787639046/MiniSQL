@@ -700,7 +700,7 @@ void Interpreter::decode_file_read()
     {
         char tmp[1000] = "";
         int tmp_index = 0;
-        while (cur_query[i] != ';')
+        while (cur_query[i] != ';' && i < cur_query.size())
         {
             if (cur_query[i] == '\n')
             {
@@ -719,7 +719,7 @@ void Interpreter::decode_file_read()
         i++;
         split_space();//split with each space
         std::string my_cur_table_name = catch_erro();//decode and catch error
-    } while (cur_query[i] != '\0');
+    } while (cur_query[i] != '\0' && i < cur_query.size());
 }
 
 std::string Interpreter::decode_table_create()
