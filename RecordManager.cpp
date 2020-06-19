@@ -275,27 +275,30 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	if (search_with_index) {
 		std::vector<int> block_id_range;
 		searchWithIndex(table_name, block_id_range, relation);
-		for (std::vector<int>::iterator i = block_id_range.begin(); i != block_id_range.end(); i++) {
-			// 获得页指针
-			char* page_pointer = buffer_manager.getPage(filepath, *i);
-			int offset = 3 * sizeof(int);
-			// 获得tuple个数
-			int tuple_num = getTupleNum(page_pointer);
-			for (int j = 0; j < tuple_num; j++) {
-				Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
-				std::vector<key_> keys = temp.getKeys();
-				bool isRelation = true;
-				for (size_t m = 0; m < relation.size(); m++) {
-					isRelation = meetRelation(keys[index[m]], relation[m]);
-					if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+		if (block_id_range.size() > 0) {
+			for (std::vector<int>::iterator i = block_id_range.begin(); i != block_id_range.end(); i++) {
+				// 获得页指针
+				char* page_pointer = buffer_manager.getPage(filepath, *i);
+				int offset = 3 * sizeof(int);
+				// 获得tuple个数
+				int tuple_num = getTupleNum(page_pointer);
+				for (int j = 0; j < tuple_num; j++) {
+					Tuple temp = decodeSingleTuple(page_pointer, offset);	//获得一条tuple
+					std::vector<key_> keys = temp.getKeys();
+					bool isRelation = true;
+					for (size_t m = 0; m < relation.size(); m++) {
+						isRelation = meetRelation(keys[index[m]], relation[m]);
+						if (isRelation == false) break;	//如果这条记录中不满足某一个条件，则跳出判断循环
+					}
+					// 逐个写入table
+					if (isRelation) tuple.push_back(temp);
 				}
-				// 逐个写入table
-				if (isRelation) tuple.push_back(temp);
 			}
+			return table;
 		}
-		return table;
+		else search_with_index = false;
 	}
-	else {
+	if (!search_with_index) {
 		// 从第二块开始遍历每个块
 		for (int i = 1; i < block_number; i++) {
 			// 获得页指针
