@@ -141,50 +141,50 @@ void IndexManager::drop_index(std::string file_name, int type)
         }
     }
 }
-int IndexManager::find_index(std::string file_name, key_ data, int type)
-{
-    int ret = 0;
-    if(type==INT)
-    {
-        auto iter_int = index_int_map.find(file_name);
-        if(iter_int != index_int_map.end())
-        {
-            ret = iter_int->second->search_element(data.INT_VALUE);
-        }
-        else
-        {
-            std::cout<<"The tree of index is not found!\n";
-            ret = -1;
-        }
-    }
-    else if(type==FLOAT)
-    {
-        auto iter_float = index_float_map.find(file_name);
-        if(iter_float != index_float_map.end())
-        {
-            ret = iter_float->second->search_element(data.FLOAT_VALUE);
-        }
-        else
-        {
-            std::cout<<"The tree of index is not found!\n";
-            ret = -1;
-        }
-    }
-    else
-    {
-        auto iter_string = index_string_map.find(file_name);
-        if(iter_string != index_string_map.end())
-        {
-            ret = iter_string->second->search_element(data.STRING_VALUE);
-        }
-        else
-        {
-            std::cout<<"The tree of index is not found!\n";
-            ret = -1;
-        }
-    }
-    return ret;
-}
+//int IndexManager::find_index(std::string file_name, key_ data, int type)
+//{
+//    int ret = 0;
+//    if(type==INT)
+//    {
+//        auto iter_int = index_int_map.find(file_name);
+//        if(iter_int != index_int_map.end())
+//        {
+//            ret = iter_int->second->search_element(data.INT_VALUE);
+//        }
+//        else
+//        {
+//            std::cout<<"The tree of index is not found!\n";
+//            ret = -1;
+//        }
+//    }
+//    else if(type==FLOAT)
+//    {
+//        auto iter_float = index_float_map.find(file_name);
+//        if(iter_float != index_float_map.end())
+//        {
+//            ret = iter_float->second->search_element(data.FLOAT_VALUE);
+//        }
+//        else
+//        {
+//            std::cout<<"The tree of index is not found!\n";
+//            ret = -1;
+//        }
+//    }
+//    else
+//    {
+//        auto iter_string = index_string_map.find(file_name);
+//        if(iter_string != index_string_map.end())
+//        {
+//            ret = iter_string->second->search_element(data.STRING_VALUE);
+//        }
+//        else
+//        {
+//            std::cout<<"The tree of index is not found!\n";
+//            ret = -1;
+//        }
+//    }
+//    return ret;
+//}
 
 void IndexManager::insert_index(std::string file_name, key_ data, int block_id, int type)
 {

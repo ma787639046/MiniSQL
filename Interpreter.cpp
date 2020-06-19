@@ -927,6 +927,7 @@ void Interpreter::read_in_command()
     split_space();
 }
 
+int tmp_cnt = 0;
 
 std::string Interpreter::decode()
 {
@@ -943,6 +944,7 @@ std::string Interpreter::decode()
     else if (query.substr(0, 6) == "insert")
     {
         decode_insert();
+        std::cout << "Current insert: " << tmp_cnt++ << std::endl;
     }
     else if (query.substr(0, 6) == "create") 
     {

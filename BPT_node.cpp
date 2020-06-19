@@ -156,6 +156,24 @@ TreeNode<T> * TreeNode<T>::Split(T &key)
         newNode->num = min_Node_num;
         this->num = min_Node_num;
     }
+    else//is a leaf node
+    {
+        key = keys[min_Node_num + 1];
+        //put right half to the new node
+        for (int i = min_Node_num + 1; i < degree; i++)
+        {
+            newNode->keys[i - min_Node_num - 1] = keys[i];
+            keys[i] = T();
+            newNode->element[i - min_Node_num - 1] = element[i];
+            element[i] = int();
+        }
+        //redirect new node
+        newNode->next = this->next;
+        this->next = newNode;
+        newNode->parent = this->parent;
+        newNode->num = min_Node_num;
+        this->num = min_Node_num + 1;
+    }
     return newNode;
 }
 //find index by key

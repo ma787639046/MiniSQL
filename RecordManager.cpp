@@ -54,8 +54,10 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 				if (attribute.index[i] == true) {
 					// 这里根据索引来查找重复
 					std::string path = "INDEX_FILE_" + attribute.name[i] + "_" + table_name;
-					int findblock = index_manager.find_index(path, keys[i], keys[i].type);
-					if (findblock >= 1) {
+					std::vector<int> my_elem;
+					index_manager.find_range(path, keys[i], keys[i], my_elem, keys[i].type, keys[i].type);
+					//int findblock = index_manager.find_index(path, keys[i], keys[i].type);
+					if (my_elem.size() >= 1) {
 						// 找到相同的值
 						if (i == attribute.primary_key) throw primary_key_conflict();
 						else throw unique_conflict();
@@ -350,6 +352,7 @@ void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& el
 	}
 	else if (relation.size() == 1) {
 		key_ another_key;
+		another_key.type = relation[0].key.type;
 		another_key.INT_VALUE = INF;
 		another_key.FLOAT_VALUE = INF;
 		another_key.STRING_VALUE = "";
@@ -357,7 +360,7 @@ void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& el
 			another_key.INT_VALUE = -another_key.INT_VALUE;
 			another_key.FLOAT_VALUE = -another_key.FLOAT_VALUE;
 			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
-			index_manager.find_range(path, another_key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+			index_manager.find_range(path, another_key, relation[0].key, elem, another_key.type, relation[0].key.type);
 		}
 		else if (relation[0].sign == GREATER || relation[0].sign == GREATER_OR_EQUAL) {
 			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
@@ -365,9 +368,9 @@ void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& el
 		}
 		else if (relation[0].sign == EQUAL) {
 			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
-			int found_block_id = index_manager.find_index(path, relation[0].key, relation[0].key.type);
-			elem.push_back(found_block_id);
-			//index_manager.find_range(path, relation[0].key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+			index_manager.find_range(path, relation[0].key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+			//int found_block_id = index_manager.find_index(path, relation[0].key, relation[0].key.type);
+			//elem.push_back(found_block_id);
 		}
 	}
 }
