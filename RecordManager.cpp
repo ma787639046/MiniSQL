@@ -296,7 +296,10 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 			}
 			return table;
 		}
-		else search_with_index = false;
+		else {
+			std::cout << "\n!!! Index cannot return results !!!\n\n";
+			search_with_index = false;
+		}
 	}
 	if (!search_with_index) {
 		// 从第二块开始遍历每个块
@@ -362,7 +365,9 @@ void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& el
 		}
 		else if (relation[0].sign == EQUAL) {
 			std::string path = "INDEX_FILE_" + relation[0].attributeName + "_" + table_name;
-			index_manager.find_range(path, relation[0].key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
+			int found_block_id = index_manager.find_index(path, relation[0].key, relation[0].key.type);
+			elem.push_back(found_block_id);
+			//index_manager.find_range(path, relation[0].key, relation[0].key, elem, relation[0].key.type, relation[0].key.type);
 		}
 	}
 }
