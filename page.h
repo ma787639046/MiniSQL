@@ -32,6 +32,8 @@ public:
     char* getPagePointer();
 private:
     char page[PAGESIZE];
+    // for test
+    char overflow_protection[PAGESIZE/8];
     std::string filename;
     int blockID;
     int pinNum;
