@@ -185,6 +185,7 @@ bool TreeNode<T>::Find(T key, unsigned int &index)
         index = 0;
         return false;
     }
+
     if(key < keys[0])//min
     {
         index = 0;
@@ -221,7 +222,7 @@ bool TreeNode<T>::Find(T key, unsigned int &index)
         int left = 0;
         int right = num - 1;
         int find = 0;
-        while(left < right + 1)
+        while(left+1 < right)
         {
             find = (right + left) / 2;
             if (keys[find] == key)
