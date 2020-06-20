@@ -19,10 +19,10 @@ void Interpreter::set_cur_table_name(std::string cur_table_name)
 
 Interpreter::~Interpreter(){}
 
+
 void Interpreter::decode_select()
 {
     int cur_index;
-    
     std::string table_name;
     std::string tmp_cur_attr_name;
     std::string tmp_element;
@@ -657,14 +657,15 @@ void Interpreter::decode_delete()
     }
 
     
-    api.deleteRecord(table_name, relations);
+    int delete_rec_num = api.deleteRecord(table_name, relations);
     std::cout << "Deletion Success \n";
+    std::cout << "You have deleted " << delete_rec_num << " records.\n";
 }
 void Interpreter::decode_exit()
 {
     throw exit_command();
 }
-void Interpreter::decode_file_read()
+std::string Interpreter::decode_file_read()
 {
     std::string cur_query;
     std::string::iterator it;
@@ -695,7 +696,7 @@ void Interpreter::decode_file_read()
 
     //get and decode every query line in this file
     int i = 0;
-
+    std::string my_cur_table_name = "";
     do
     {
         char tmp[1000] = "";
@@ -718,8 +719,10 @@ void Interpreter::decode_file_read()
         query = tmp;//get the query
         i++;
         split_space();//split with each space
-        std::string my_cur_table_name = catch_erro();//decode and catch error
+        my_cur_table_name = catch_erro();//decode and catch error
     } while (cur_query[i] != '\0' && i < cur_query.size());
+
+    return my_cur_table_name;
 }
 
 std::string Interpreter::decode_table_create()
@@ -901,6 +904,20 @@ void Interpreter::decode_index_delete()
     cur_p++;
 
     std::string table_name = current_table_name;
+    if (current_table_name == "" && query.substr(cur_p,2)!="on")
+    {
+        std::cout << "No table name detected! Please input \"drop index index_name on table_name;\" manually\n";
+        throw 1;
+    }
+    else if (query.substr(cur_p, 2) == "on")
+    {
+        table_name = fetch_word(cur_p + 3, cur_p);
+    }
+   /* if (query[cur_p + 1] != '\0')
+    {
+        std::cout << "Expected end after ;";
+        throw 1;
+    }*/
     //delete the index
     api.delete_index(table_name, index_name);
     std::cout << "Delete Index Success\n";
@@ -934,7 +951,13 @@ std::string Interpreter::decode()
     std::string my_cur_table_name = "";
     if (query.substr(0, 6) == "select") 
     {
+        clock_t begin, end;
+        double total_time;
+        begin = clock();
         decode_select();
+        end = clock();
+        total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+        std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
     }
     else if (query.substr(0, 4) == "drop") 
     {
@@ -965,7 +988,7 @@ std::string Interpreter::decode()
     }
     else if (query.substr(0, 8) == "execfile") 
     {
-        decode_file_read();
+        my_cur_table_name = decode_file_read();
     }
     else 
     {

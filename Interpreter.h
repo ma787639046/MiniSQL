@@ -4,6 +4,7 @@
 #include "Relation.h"
 #include "StringFunc.h"
 #include "exceptions.h"
+#include <time.h>
 
 class Interpreter
 {
@@ -20,7 +21,7 @@ public:
     void decode_delete();//do DELETE
     void decode_exit();//do EXIT
     //decode stuff
-    void decode_file_read();
+    std::string decode_file_read();
     std::string decode_table_create();
     void decode_table_drop();
     void decode_index_generate();
