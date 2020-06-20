@@ -54,10 +54,17 @@ bool BPlusTree<T>::insert_key(T &key, int element)
     {
         initTree();
     }
+
     FindLeaf(root, key, t_node);
     if(t_node.isFind)//is found, alread exsits
     {
         std::cout<<"the inserted key is already exsits.\n";
+
+        tmp_Node m_node;
+        FindLeaf(root, key, m_node);
+
+
+        std::cout << "the key is " << key << std::endl;
         return false;
     }
     t_node.pNode->Add(key,element);
@@ -437,6 +444,7 @@ void BPlusTree<T>::FindLeaf(Tree pNode, T key, tmp_Node &t_node)
             FindLeaf(pNode->child[index], key, t_node);
         }
     }
+    return;
 }
 //get key's element
 template <class T>
@@ -567,41 +575,52 @@ int BPlusTree<T>::getBlockNum(std::string table_name)
     return block_num;
 }
 template <class T>
-void BPlusTree<T>::readFromDisk(char *p, char *end)
+void BPlusTree<T>::readFromDisk(char *p, char *end)//read current page of p
 {
     T key;//create a key
     int element;//create an element
-    for(int i = 0; i < PAGESIZE; i++)
+
+    for(int i = 0; i < PAGESIZE; i++)//check current page
     {
-        if (p[i] != '#')
+        if (p[i] != '#')//if the page is empty
         {
             return;
         }
         i += 2;
         char tmp[100];
         int j;
-        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)//get the id
         {
             tmp[j++] = p[i];
         }
         tmp[j] = '\0';
         std::string s(tmp);
-        std::stringstream stream(s);
-        //get the key
-        stream >> key;
-        memset(tmp, 0, sizeof(tmp));
-        i++;
-        for(j = 0; i < PAGESIZE && p[i] != ' '; i++)
+
+        if (s != "")//if id is not empty
         {
-            tmp[j++] = p[i];
+            std::stringstream stream(s);
+            //get the key
+            stream >> key;
+
+            char tmp1[100];
+            i++;
+            for (j = 0; i < PAGESIZE && p[i] != ' '; i++)//get the its corresponding block_id
+            {
+                tmp1[j++] = p[i];
+            }
+            tmp1[j] = '\0';
+            std::string s1(tmp1);
+            //std::string s11 = s1;
+            std::stringstream stream1(s1);
+            //get the element
+            stream1 >> element;
+            //put them into the tree
+            insert_key(key, element);
         }
-        tmp[j] = '\0';
-        std::string s1(tmp);
-        std::stringstream stream1(s1);
-        //get the element
-        stream1 >> element;
-        //put them into the tree
-        insert_key(key, element);
+        else
+        {
+            int trash = 0;//for debug
+        }
     }
 }
 //read from disk all block_num times
@@ -616,11 +635,11 @@ void BPlusTree<T>::readFromDiskAll()
         block_num = 1;
     }
     //get page pointer from buffer manager
-    for(int i=0;i<block_num;i++)
+    for(int i=0;i<block_num;i++)//read every page
     {
         char *p = buffer_manager.getPage(fname, i);
         //read: insert the key and the element into the tree
-        readFromDisk(p, p+PAGESIZE);
+        readFromDisk(p, p+PAGESIZE);//read current page
     }
 }
 template <class T>
@@ -632,21 +651,52 @@ void BPlusTree<T>::WBToDiskAll()
     //get the leaf
     Tree ntmp = leafHead;
     int i, j;
-    //go over each leaf
-    for (j = 0, i = 0; ntmp != NULL; j++)
+
+    int once = 0;
+    int length_per = 0;
+
+    //go over each leaf node, one page for 1 leaf node
+
+    j = 0;//blcok_id -> new page
+    i = 0;//each key in a leaf node
+
+    //get the first page
+    char* p = buffer_manager.getPage(fname, j);
+    int offset = 0;
+    memset(p, 0, PAGESIZE);
+
+    while (ntmp != NULL)//see every leaf node
     {
-        char *p = buffer_manager.getPage(fname, j);
-        int offset = 0;
-        memset(p, 0, PAGESIZE);
-        //for each leaf, write p: p[offset] = ntmp->keys[i] + ntmp->element[i]
+        //for each key in leaf node, write p: p[offset] = ntmp->keys[i] + ntmp->element[i]
         for (i = 0; i < ntmp->num; i++)
         {
+
+            if (length_per != 0 && offset + length_per >= PAGESIZE)//need a new page
+            {
+                p[offset] = '\0';
+                //make this page dirty
+                int page_id = buffer_manager.getPageId(fname, j);
+                buffer_manager.setDirty(page_id);
+
+                j++;//get a new page
+                p = buffer_manager.getPage(fname, j);
+                offset = 0;
+                memset(p, 0, PAGESIZE);
+
+            }
+            
             p[offset++] = '#';
             p[offset++] = ' ';
-            string_duplicate(p, offset, ntmp->keys[i]);
+            string_duplicate(p, offset, ntmp->keys[i]);//write the attribute value of index, like id
             p[offset++] = ' ';
-            string_duplicate(p, offset, ntmp->element[i]);
+            string_duplicate(p, offset, ntmp->element[i]);//write the block id
             p[offset++] = ' ';
+
+            if (once == 0)
+            {
+                once = 1;
+                length_per = offset;
+            }
         }
         p[offset] = '\0';
         //make this page dirty
@@ -654,7 +704,10 @@ void BPlusTree<T>::WBToDiskAll()
         buffer_manager.setDirty(page_id);
         ntmp = ntmp->next;
     }
+
+    block_num = getBlockNum(fname);
     //if j still not full, set them empty, and make the rest blocks dirty
+    j++;
     while (j < block_num)
     {
         char *p = buffer_manager.getPage(fname, j);

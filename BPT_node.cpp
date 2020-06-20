@@ -69,7 +69,7 @@ unsigned int TreeNode<T>::Add(T &key)
 template <class T>
 unsigned int TreeNode<T>::Add(T &key, int elem)
 {
-    if(!isLeaf) return 0;
+    if(!isLeaf) return -1;
     if(num==0)//empty
     {
         num++;
@@ -81,7 +81,7 @@ unsigned int TreeNode<T>::Add(T &key, int elem)
     bool isexist = Find(key,index);
     if(!isexist)
     {
-        for(int i=num;i>index;i--)
+        for(unsigned int i=num;i>index;i--)
         {
             keys[i] = keys[i-1];
             element[i] = element[i-1];
@@ -222,6 +222,7 @@ bool TreeNode<T>::Find(T key, unsigned int &index)
         int left = 0;
         int right = num - 1;
         int find = 0;
+
         while(left+1 < right)
         {
             find = (right + left) / 2;
@@ -239,6 +240,7 @@ bool TreeNode<T>::Find(T key, unsigned int &index)
                 right = find;
             }
         }
+
         if (keys[left] >= key)
         {
             index = left;
