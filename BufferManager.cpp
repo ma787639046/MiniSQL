@@ -36,6 +36,7 @@ int BufferManager::loadDiskBlock(int pageID , std::string file_name , int blockI
     if (file == nullptr) return -1; //找不到文件
     fseek(file , PAGESIZE * blockID , SEEK_SET);
     char* buffer = BufferPool[pageID].getPagePointer();
+    memset(buffer, 0, PAGESIZE);
     fread(buffer , PAGESIZE , 1 , file);
     fclose(file);
     // 初始化页
