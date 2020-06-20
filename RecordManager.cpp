@@ -28,7 +28,7 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 {
 	// 判断对应表名是否存在
 	CatalogManager catalog_manager;
-	IndexManager index_manager(table_name);
+	static IndexManager index_manager(table_name);
 	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
 	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
 	std::vector<key_> keys = tuple.getKeys();
