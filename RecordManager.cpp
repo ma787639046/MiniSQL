@@ -452,6 +452,7 @@ Tuple RecordManager::decodeSingleTuple(char* pointer, int& offset) {
 		value[string_len] = '\0';
 		offset += string_len;
 		key.STRING_VALUE = value;
+		free(value);
 		tuple.addKey(key);
 	}
 	return tuple;
