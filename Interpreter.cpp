@@ -422,11 +422,27 @@ void Interpreter::decode_insert()
         key_ key_insert;
         key_insert.type = attr_find.type[n_insert];
 
+
+
+
         //start inserting
         if (key_insert.type == -1)//int
         {
             try
             {
+                //there is ' or "
+                if (value_insert[0] == '\'' || value_insert[value_insert.length() - 1] == '\'' || value_insert[0] == '"' || value_insert[value_insert.length() - 1] == '"')
+                {
+                    std::cout << " \' or \" detected when inputting int type value\n";
+                    throw input_format_error();
+                }
+                if (value_insert.find('.')!= std::string::npos)
+                {
+                    std::cout << "float point detected when inputting int type value\n";
+                    throw input_format_error();
+                }
+
+
                 key_insert.INT_VALUE = string2num<int>(value_insert);
             }
             catch (...)
@@ -439,6 +455,14 @@ void Interpreter::decode_insert()
         {
             try
             {
+                //there is ' or "
+                if (value_insert[0] == '\'' || value_insert[value_insert.length() - 1] == '\'' || value_insert[0] == '"' || value_insert[value_insert.length() - 1] == '"')
+                {
+                    std::cout << " \' or \" detected when inputting int type value\n";
+                    throw input_format_error();
+                }
+
+
                 key_insert.FLOAT_VALUE = string2num<float>(value_insert);
             }
             catch (...)
@@ -479,8 +503,12 @@ void Interpreter::decode_insert()
             {
                 throw key_type_conflict();
             }
-           
+
         }
+
+
+
+
         //add it into tuple
         cur_tuple.addKey(key_insert);
         n_insert++;//top++
@@ -718,7 +746,7 @@ std::string Interpreter::decode_file_read()
         tmp_index++;
         query = tmp;//get the query
         i++;
-        split_space();//split with each space
+        split_space(1);//split with each space
         my_cur_table_name = catch_erro();//decode and catch error
     } while (cur_query[i] != '\0' && i < cur_query.size());
 
@@ -941,7 +969,7 @@ void Interpreter::read_in_command()
     } while (cur_s.length()==0||cur_s[cur_s.length() - 1] != ';');
     
     query[query.length() - 2] = '\0';
-    split_space();
+    split_space(0);
 }
 
 int tmp_cnt = 0;
@@ -1102,7 +1130,7 @@ int Interpreter::get_len(float number)
     return ret+3;
 }
 //add space to split
-void Interpreter::split_space()
+void Interpreter::split_space(int is_file)
 {
     int cur_p;
     //read every char in query
@@ -1122,8 +1150,18 @@ void Interpreter::split_space()
             }
         }
     }
-    //add a space at the end
-    query.insert(query.length() - 2, " ");
+
+    if (is_file != 1)
+    {
+        //add a space at the end
+        query.insert(query.length() - 2, " ");
+    }
+    else
+    {
+        query.insert(query.length(), " ");
+        //query[query.length()-1] = '\0';
+    }
+    
     
     //delete double space or trible space
     int is_one_space = 0;

@@ -35,6 +35,6 @@ public:
     int get_type(int location, int & tail);//get type
     int get_len(int number);//get word length
     int get_len(float number);//get word length
-    void split_space();//add space to split
+    void split_space(int is_file);//add space to split
     std::string catch_erro();//catch all erros
 };
