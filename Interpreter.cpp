@@ -957,7 +957,7 @@ std::string Interpreter::decode()
         decode_select();
         end = clock();
         total_time = (double)(end - begin) / CLOCKS_PER_SEC;
-        std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
+        //std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
     }
     else if (query.substr(0, 4) == "drop") 
     {

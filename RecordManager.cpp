@@ -28,8 +28,8 @@ void RecordManager::insertRecord(std::string table_name, Tuple tuple)
 {
 	// 判断对应表名是否存在
 	CatalogManager catalog_manager;
-	IndexManager index_manager(table_name);
-	//static IndexManager index_manager(table_name);
+	//IndexManager index_manager(table_name);
+	static IndexManager index_manager(table_name);
 	if (!catalog_manager.havetable(table_name)) throw table_not_exist();
 	Attribute attribute = catalog_manager.getAttribute(table_name);	//获取表的所有属性信息
 	std::vector<key_> keys = tuple.getKeys();
@@ -265,7 +265,7 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	if (relation.size() == 1) {
 		if (relation[0].sign != NOT_EQUAL && attribute.index[index[0]] == true) {
 			search_with_index = true;
-		} 
+		}
 	}
 	else if (relation.size() == 2) {
 		// 两个搜索条件，属性名要一致
@@ -278,6 +278,10 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 	if (search_with_index) {
 		std::vector<int> block_id_range;
 		searchWithIndex(table_name, block_id_range, relation);
+		//
+		clock_t begin, end;
+		double total_time;
+		begin = clock();
 		if (block_id_range.size() > 0 && block_id_range[0] != -1) {	//index找到了range
 			for (std::vector<int>::iterator i = block_id_range.begin(); i != block_id_range.end(); i++) {
 				// 获得页指针
@@ -297,18 +301,25 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 					if (isRelation) tuple.push_back(temp);
 				}
 			}
+			end = clock();
+			total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+			std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
 			return table;
 		}
 		else {
-			std::cout << "\n!!! Index cannot return results !!!\n\n";
+			//std::cout << "\n!!! Index cannot return results !!!\n\n";
 			search_with_index = false;
 		}
 	}
 	if (!search_with_index) {
+		//
+		clock_t begin, end;
+		double total_time;
+		begin = clock();
 		// 从第二块开始遍历每个块
 		for (int i = 1; i < block_number; i++) {
 			// 获得页指针
-			char* page_pointer  = buffer_manager.getPage(filepath ,i);
+			char* page_pointer = buffer_manager.getPage(filepath, i);
 			int offset = 3 * sizeof(int);
 			// 获得tuple个数
 			int tuple_num = getTupleNum(page_pointer);
@@ -324,17 +335,18 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 				if (isRelation) tuple.push_back(temp);
 			}
 		}
+		end = clock();
+		total_time = (double)(end - begin) / CLOCKS_PER_SEC;
+		std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
 		return table;
 	}
-
-	
 }
 
 
 
 void RecordManager::searchWithIndex(std::string table_name, std::vector<int>& elem, std::vector<Relation> relation)
 {
-	IndexManager index_manager(table_name);
+	static IndexManager index_manager(table_name);
 	if (relation.size() == 2) {
 		if (relation[0].sign == LESS || relation[0].sign == LESS_OR_EQUAL) {
 			if (relation[1].sign == GREATER || relation[1].sign == GREATER_OR_EQUAL) {
