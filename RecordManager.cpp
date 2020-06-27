@@ -340,6 +340,7 @@ Table RecordManager::loadRecord(std::string table_name, std::vector<Relation> re
 		std::cout << "The time cost of this select is: " << total_time << " seconds.\n";
 		return table;
 	}
+    return table;
 }
 
 

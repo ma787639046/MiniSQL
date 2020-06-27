@@ -188,36 +188,36 @@ void IndexManager::drop_index(std::string file_name, int type)
 
 void IndexManager::insert_index(std::string file_name, key_ data, int block_id, int type)
 {
-    if(type==INT)
+    if(type==INT)//if type is int
     {
         auto iter_int = index_int_map.find(file_name);
         if(iter_int != index_int_map.end())
         {
-            iter_int->second->insert_key(data.INT_VALUE,block_id);
+            iter_int->second->insert_key(data.INT_VALUE,block_id);//get int BPlusTree's insert function
         }
         else
         {
             std::cout<<"The tree is not found!\n";
         }
     }
-    else if(type==FLOAT)
+    else if(type==FLOAT)//if type is float
     {
         auto iter_float = index_float_map.find(file_name);
         if(iter_float != index_float_map.end())
         {
-            iter_float->second->insert_key(data.FLOAT_VALUE,block_id);
+            iter_float->second->insert_key(data.FLOAT_VALUE,block_id);//get float BPlusTree's insert function
         }
         else
         {
             std::cout<<"The tree is not found!\n";
         }
     }
-    else
+    else//if type is string
     {
         auto iter_string = index_string_map.find(file_name);
         if(iter_string != index_string_map.end())
         {
-            iter_string->second->insert_key(data.STRING_VALUE,block_id);
+            iter_string->second->insert_key(data.STRING_VALUE,block_id);//get string BPlusTree's insert function
         }
         else
         {
@@ -227,36 +227,36 @@ void IndexManager::insert_index(std::string file_name, key_ data, int block_id, 
 }
 void IndexManager::delete_index(std::string file_name, key_ data, int type)//delete key
 {
-    if(type==INT)
+    if(type==INT)//if type is int
     {
         auto iter_int = index_int_map.find(file_name);
         if(iter_int != index_int_map.end())
         {
-            iter_int->second->delete_key(data.INT_VALUE);
+            iter_int->second->delete_key(data.INT_VALUE);//get int BPlusTree's delete function
         }
         else
         {
             std::cout<<"The tree is not found!\n";
         }
     }
-    else if(type==FLOAT)
+    else if(type==FLOAT)//if type is float
     {
         auto iter_float = index_float_map.find(file_name);
         if(iter_float != index_float_map.end())
         {
-            iter_float->second->delete_key(data.FLOAT_VALUE);
+            iter_float->second->delete_key(data.FLOAT_VALUE);//get float BPlusTree's delete function
         }
         else
         {
             std::cout<<"The tree is not found!\n";
         }
     }
-    else
+    else//if type is string
     {
         auto iter_string = index_string_map.find(file_name);
         if(iter_string != index_string_map.end())
         {
-            iter_string->second->delete_key(data.STRING_VALUE);
+            iter_string->second->delete_key(data.STRING_VALUE);//get string BPlusTree's delete function
         }
         else
         {
