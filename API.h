@@ -19,8 +19,6 @@
 #include "const.h"
 
 extern BufferManager buffer_manager;
-
-
 class API {
 private:
 	CatalogManager catalog_manager;

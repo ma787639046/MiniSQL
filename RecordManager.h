@@ -19,6 +19,7 @@
 #include "IndexManager.h"
 #include "Table.h"
 #include "Relation.h"
+#include "time.h"
 //for xcode
 #include <stdio.h>
 #include <stdint.h>
